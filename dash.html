@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Simulação - Análise de Viabilidade</title>
+    
+    <link rel="stylesheet" href="dash.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <main class="container">
+
+        <header class="report-header">
+            <h1><i class="fas fa-chart-pie"></i> Análise de Viabilidade Econômica</h1>
+            <p>
+                Relatório para: <strong id="report-lead-name">[Nome do Lead]</strong> | 
+                Unidade: <strong id="report-unit-name">[Número/Nome da Unidade]</strong>
+            </p>
+        </header>
+
+        <section class="resultados-grid">
+            <div class="card-resultado custo-atual">
+                <h4>Custo Anual Projetado (Mercado Cativo)</h4>
+                <p id="resultado-custo-atual">R$ 0,00</p>
+                <span>Baseado no histórico de 12 meses</span>
+            </div>
+            <div class="card-resultado custo-simulado">
+                <h4>Custo Anual Simulado (Mercado Livre)</h4>
+                <p id="resultado-custo-simulado">R$ 0,00</p>
+                <span>Com base nos parâmetros da proposta</span>
+            </div>
+            <div class="card-resultado economia">
+                <h4>Sua Economia Anual</h4>
+                <p id="resultado-economia-reais">R$ 0,00</p>
+                <span id="resultado-economia-percentual">(0,00%)</span>
+            </div>
+        </section>
+
+        <section class="widget">
+            <h3><i class="fas fa-chart-bar"></i> Comparativo de Custo Mensal</h3>
+            <div class="chart-container">
+                <canvas id="simulador-grafico-economia"></canvas>
+            </div>
+        </section>
+
+        <section class="widget">
+            <h3><i class="fas fa-list-ol"></i> Detalhamento Mês a Mês</h3>
+            <div class="table-container">
+                <table id="detalhes-simulacao-table">
+                    <thead>
+                        <tr>
+                            <th>Mês</th>
+                            <th>Custo Atual (R$)</th>
+                            <th>Custo Simulado (R$)</th>
+                            <th class="coluna-economia">Economia (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detalhes-tbody">
+                        </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Total Anual</th>
+                            <td id="total-atual">R$ 0,00</td>
+                            <td id="total-simulado">R$ 0,00</td>
+                            <td class="coluna-economia" id="total-economia">R$ 0,00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+
+        <footer class="report-actions">
+            <button class="btn btn-save">
+                <i class="fas fa-save"></i> Salvar na Proposta
+            </button>
+            <button class="btn btn-secondary">
+                <i class="fas fa-file-pdf"></i> Gerar PDF
+            </button>
+        </footer>
+
+    </main>
+
+    <script src="dashb.js"></script>
+</body>
+</html>

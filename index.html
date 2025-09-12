@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Leads</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+    <div id="app-wrapper">
+        <main class="app-container">
+            <div class="main-header">
+                <h1><i class="fas fa-users-cog"></i> Sistema de Gestão de Leads</h1>
+                <p>Gerencie seus leads de forma eficiente e organizada</p>
+            </div>
+
+            <header class="tab-header">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="cadastro">
+                        <i class="fas fa-user-plus"></i> Cadastro de Leads
+                    </button>
+                    <button class="tab-button" data-tab="unidades">
+                        <i class="fas fa-plug"></i> Unidades Lead
+                    </button>
+                    <button class="tab-button" data-tab="historico">
+                        <i class="fas fa-history"></i> Histórico Leads
+                    </button>
+                    <button class="tab-button" data-tab="proposta">
+                        <i class="fas fa-file-invoice"></i> Propostas
+                    </button>
+                    <button class="tab-button" data-tab="simulacao">
+                        <i class="fas fa-calculator"></i> Simulação
+                    </button>
+                    <button class="tab-button" data-tab="dashboard">
+                        <i class="fas fa-chart-pie"></i> Dashboard
+                    </button>
+                </div>
+            </header>
+
+            <div id="cadastro" class="tab-content active">
+                <div id="cadastro-listing-screen" class="screen active">
+                    <div class="listing-screen">
+                        <div class="listing-header">
+                            <h2 class="listing-title">
+                                <i class="fas fa-table"></i> Leads Cadastrados
+                            </h2>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" id="add-lead-btn">
+                                    <i class="fas fa-plus"></i> Adicionar Lead
+                                </button>
+                                <button class="btn btn-secondary" id="refresh-leads-btn">
+                                    <i class="fas fa-sync-alt"></i> Atualizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <input type="text" class="filter-input" id="filter-leads" placeholder="🔍 Filtrar por qualquer campo...">
+                        </div>
+
+                        <div class="table-container">
+                            <table id="leads-table">
+                                <thead>
+                                    <tr>
+                                        <th>CPF/CNPJ</th>
+                                        <th>Razão Social</th>
+                                        <th>Nome Fantasia</th>
+                                        <th>Vendedor</th>
+                                        <th>Contato</th>
+                                        <th>Data Registro</th>
+                                        <th>Usuário</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cadastro-form-screen" class="screen">
+                    <div class="form-screen">
+                        <div class="form-header">
+                            <h2 class="form-title" id="cadastro-form-title">
+                                <i class="fas fa-user-plus"></i> Cadastro de Leads
+                            </h2>
+                            <button class="btn btn-back" id="cadastro-back-btn">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </button>
+                        </div>
+
+                        <div class="form-subtitle">
+                            <p>Preencha os dados abaixo. Campos com * são obrigatórios.</p>
+                        </div>
+
+                        <form id="lead-form" autocomplete="off">
+                            <input type="hidden" id="lead-id-hidden" name="lead_id_hidden">
+                            
+                            <div class="form-grid">
+                                <div class="input-group">
+                                    <label for="cpf_cnpj">CPF/CNPJ*</label>
+                                    <input type="text" id="cpf_cnpj" name="Cpf_CnpjLead" placeholder="Apenas números">
+                                </div>
+                                <div class="input-group">
+                                    <label for="razao_social">Razão Social*</label>
+                                    <input type="text" id="razao_social" name="RazaoSocialLead" placeholder="Ex: ACME LTDA">
+                                </div>
+                                <div class="input-group">
+                                    <label for="nome_fantasia">Nome Fantasia</label>
+                                    <input type="text" id="nome_fantasia" name="NomeFantasia" placeholder="Ex: ACME">
+                                </div>
+                                <div class="input-group">
+                                    <label for="cep">CEP</label>
+                                    <input type="text" id="cep" name="Cep" placeholder="00000-000">
+                                </div>
+                                <div class="input-group">
+                                    <label for="logradouro">Logradouro</label>
+                                    <input type="text" id="logradouro" name="Logradouro" placeholder="Rua, Av, etc.">
+                                </div>
+                                <div class="input-group">
+                                    <label for="numero">Número</label>
+                                    <input type="text" id="numero" name="Numero">
+                                </div>
+                                <div class="input-group">
+                                    <label for="complemento">Complemento</label>
+                                    <input type="text" id="complemento" name="Complemento" placeholder="Sala, Bloco, etc.">
+                                </div>
+                                <div class="input-group">
+                                    <label for="bairro">Bairro</label>
+                                    <input type="text" id="bairro" name="Bairro">
+                                </div>
+                                <div class="input-group">
+                                    <label for="uf">UF</label>
+                                    <select id="uf" name="Uf"><option value="">Carregando...</option></select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="cidade">Cidade</label>
+                                    <select id="cidade" name="Cidade" disabled><option value="">Selecione um estado</option></select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="cnae">CNAE</label>
+                                    <input type="text" id="cnae" name="Cnae" placeholder="Ex: 4711301">
+                                </div>
+                                <div class="input-group with-icon">
+                                    <label for="data_registro_lead">Data de Registo</label>
+                                    <input type="text" id="data_registro_lead" name="DataResgistroLead" class="datepicker-input" readonly placeholder="Clique para selecionar">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </div>
+                                <div class="input-group">
+                                    <label for="usuario">Usuário do Registo</label>
+                                    <input type="text" id="usuario" name="UsuriaEditorRegistro">
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button id="clear-lead-button" type="button" class="btn btn-clear">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                                <button id="save-lead-button" type="submit" class="btn btn-save">
+                                    <i class="fas fa-save"></i> Salvar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="unidades" class="tab-content">
+                <div id="unidades-listing-screen" class="screen active">
+                    <div class="listing-screen">
+                        <div class="listing-header">
+                            <h2 class="listing-title">
+                                <i class="fas fa-plug"></i> Unidades Consumidoras
+                            </h2>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" id="add-unidade-btn">
+                                    <i class="fas fa-plus"></i> Adicionar Unidade
+                                </button>
+                                <button class="btn btn-secondary" id="refresh-unidades-btn">
+                                    <i class="fas fa-sync-alt"></i> Atualizar
+                                </button>
+                                <button class="btn btn-info" id="goto-historico-from-unidades-btn" disabled>
+                                    <i class="fas fa-history"></i> Adicionar Histórico
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <div class="unit-selector-container">
+                                <label for="lead-selector">Selecione um Lead para ver as Unidades</label>
+                                <select id="lead-selector" class="filter-input">
+                                    <option value="">Carregando leads...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table id="unidades-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nº UC</th>
+                                        <th>Nome da Unidade</th>
+                                        <th>CNPJ UC</th>
+                                        <th>Logradouro</th>
+                                        <th>Cidade</th>
+                                        <th>UF</th>
+                                        <th>Mercado Atual</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+
+                        <div class="historico-preview">
+                            <h3><i class="fas fa-chart-line"></i> Histórico de Consumo da Unidade Selecionada</h3>
+                            <div class="table-container">
+                                <table id="unidade-historico-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Numero Da Uc Lead</th>
+                                            <th>ID Mes</th>
+                                            <th>Demanda CP</th>
+                                            <th>Demanda CFP</th>
+                                            <th>Demanda CG</th>
+                                            <th>kW Proj Ponta</th>
+                                            <th>kW Proj Fora Ponta</th>
+                                            <th>kWh Proj Ponta</th>
+                                            <th>kWh Proj Fora Ponta</th>
+                                            <th>kWh Proj HRes</th>
+                                            <th>kWh Proj Ponta G</th>
+                                            <th>kWh Proj Fora Ponta G</th>
+                                            <th>kW Proj G</th>
+                                            <th>kWh Proj Diesel P</th>
+                                            <th>kWh Compensado P</th>
+                                            <th>kWh Compensado FP</th>
+                                            <th>kWh Compensado Hr</th>
+                                            <th>kW Geracao Projetada</th>
+                                            <th>Data Registro Historico</th>
+                                            <th>Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="unidades-form-screen" class="screen">
+                    <div class="form-screen">
+                        <div class="form-header">
+                            <h2 class="form-title" id="unidades-form-title">
+                                <i class="fas fa-plug"></i> Unidades Consumidoras
+                            </h2>
+                            <button class="btn btn-back" id="unidades-back-btn">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </button>
+                        </div>
+
+                        <div class="form-subtitle">
+                            <p id="unidades-subtitle">Preencha os dados da unidade consumidora.</p>
+                        </div>
+
+                        <form id="unidade-form" autocomplete="off">
+                            <div class="form-grid">
+                                <div class="input-group">
+                                    <label>Nº da UC*</label>
+                                    <input type="text" name="NumeroDaUcLead" placeholder="Apenas números">
+                                </div>
+                                <div class="input-group">
+                                    <label>CNPJ Distribuidora</label>
+                                    <input type="text" name="CnpjDistribuidora">
+                                </div>
+                                <div class="input-group">
+                                    <label>CNPJ da UC</label>
+                                    <input type="text" name="CnpjDaUnidadeConsumidora">
+                                </div>
+                                <div class="input-group">
+                                    <label>Nome da Unidade</label>
+                                    <input type="text" name="NomeDaUnidade">
+                                </div>
+                                <div class="input-group">
+                                    <label>Logradouro</label>
+                                    <input type="text" name="Logradouro">
+                                </div>
+                                <div class="input-group">
+                                    <label>Número</label>
+                                    <input type="text" name="Numero">
+                                </div>
+                                <div class="input-group">
+                                    <label>Complemento</label>
+                                    <input type="text" name="Complemento">
+                                </div>
+                                <div class="input-group">
+                                    <label>Bairro</label>
+                                    <input type="text" name="Bairro">
+                                </div>
+                                <div class="input-group">
+                                    <label>CEP</label>
+                                    <input type="text" name="Cep">
+                                </div>
+                                <div class="input-group">
+                                    <label>UF</label>
+                                    <select name="Uf" class="uf-unidade-select"><option value="">Selecione...</option></select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Cidade</label>
+                                    <select name="Cidade" class="cidade-unidade-select" disabled><option value="">Selecione um estado</option></select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Mercado Atual</label>
+                                    <input type="text" name="MercadoAtual">
+                                </div>
+                                <div class="input-group">
+                                    <label>Subgrupo Tarifário</label>
+                                    <input type="text" name="SubgrupoTarifario">
+                                </div>
+                                <div class="input-group">
+                                    <label>Tarifa</label>
+                                    <input type="text" name="Tarifa">
+                                </div>
+                                <div class="input-group">
+                                    <label>Alíquota ICMS (%)</label>
+                                    <input type="text" name="AliquotaICMS" placeholder="Ex: 18.5">
+                                </div>
+                                <div class="input-group">
+                                    <label>Aplica Conta Hídrica</label>
+                                    <input type="text" name="AplicaContaEHidrica">
+                                </div>
+                                <div class="input-group">
+                                    <label>Liminar ICMS Demanda</label>
+                                    <input type="text" name="LiminarICMSDemanda">
+                                </div>
+                                <div class="input-group">
+                                    <label>Liminar ICMS TUSD</label>
+                                    <input type="text" name="LiminarICMSTusd">
+                                </div>
+                                <div class="input-group">
+                                    <label>Benefício Rural (%)</label>
+                                    <input type="text" name="BeneficioRuralIrrigacao" placeholder="Ex: 10.0">
+                                </div>
+                                <div class="input-group">
+                                    <label>Rural ou Sazo Reconhecida</label>
+                                    <input type="text" name="RuralOuSazoReconhecida">
+                                </div>
+                                <div class="input-group">
+                                    <label>Saldo SCEE</label>
+                                    <input type="text" name="SaldoMaisRecenteSCEE" placeholder="Ex: 150.75">
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button id="clear-unidade-button" type="button" class="btn btn-clear">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                                <button id="save-unidade-button" type="submit" class="btn btn-save">
+                                    <i class="fas fa-save"></i> Salvar Unidade
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="historico" class="tab-content">
+                <div id="historico-listing-screen" class="screen active">
+                    <div class="listing-screen">
+                        <div class="listing-header">
+                            <h2 class="listing-title">
+                                <i class="fas fa-history"></i> Histórico de Consumo
+                            </h2>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" id="add-historico-btn">
+                                    <i class="fas fa-plus"></i> Adicionar Histórico
+                                </button>
+                                <button class="btn btn-secondary" id="refresh-historico-btn">
+                                    <i class="fas fa-sync-alt"></i> Atualizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <div class="form-grid" style="grid-template-columns: 1fr 1fr; align-items: end;">
+                                <div class="unit-selector-container">
+                                    <label for="historico-lead-selector">1. Selecione um Lead</label>
+                                    <select id="historico-lead-selector" class="filter-input">
+                                        <option value="">Carregando leads...</option>
+                                    </select>
+                                </div>
+                                <div class="unit-selector-container">
+                                    <label for="historico-unidade-selector">2. Selecione a Unidade</label>
+                                    <select id="historico-unidade-selector" class="filter-input" disabled>
+                                        <option value="">Aguardando seleção do lead...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table id="historico-table">
+                                <thead>
+                                    <tr>
+                                        <th>Numero Da Uc Lead</th>
+                                        <th>ID Mes</th>
+                                        <th>Demanda CP</th>
+                                        <th>Demanda CFP</th>
+                                        <th>Demanda CG</th>
+                                        <th>kW Proj Ponta</th>
+                                        <th>kW Proj Fora Ponta</th>
+                                        <th>kWh Proj Ponta</th>
+                                        <th>kWh Proj Fora Ponta</th>
+                                        <th>kWh Proj HRes</th>
+                                        <th>kWh Proj Ponta G</th>
+                                        <th>kWh Proj Fora Ponta G</th>
+                                        <th>kW Proj G</th>
+                                        <th>kWh Proj Diesel P</th>
+                                        <th>kWh Compensado P</th>
+                                        <th>kWh Compensado FP</th>
+                                        <th>kWh Compensado Hr</th>
+                                        <th>kW Geracao Projetada</th>
+                                        <th>Data Registro Historico</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="historico-form-screen" class="screen">
+                    <div class="form-screen">
+                        <div class="form-header">
+                            <h2 class="form-title" id="historico-form-title">
+                                <i class="fas fa-history"></i> Adicionar/Editar Histórico
+                            </h2>
+                            <button class="btn btn-back" id="historico-back-btn">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </button>
+                        </div>
+
+                        <div class="form-subtitle">
+                            <p id="historico-subtitle">Selecione uma unidade para gerir o seu histórico.</p>
+                        </div>
+
+                        <form id="historico-form" autocomplete="off">
+                            <div class="form-grid">
+                                <div class="input-group">
+                                    <label>ID Mês* (YYYY-MM)</label>
+                                    <input type="text" name="IDMes" placeholder="Ex: 2025-09">
+                                </div>
+                                <div class="input-group">
+                                    <label>Demanda CP</label>
+                                    <input type="text" name="DemandaCP" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>Demanda CFP</label>
+                                    <input type="text" name="DemandaCFP" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>Demanda CG</label>
+                                    <input type="text" name="DemandaCG" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kW Proj Ponta</label>
+                                    <input type="text" name="kWProjPonta" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kW Proj Fora Ponta</label>
+                                    <input type="text" name="kWProjForaPonta" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Proj Ponta</label>
+                                    <input type="text" name="kWhProjPonta" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Proj Fora Ponta</label>
+                                    <input type="text" name="kWhProjForaPonta" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Proj HRes</label>
+                                    <input type="text" name="kWhProjHRes" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Proj Ponta G</label>
+                                    <input type="text" name="kWhProjPontaG" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Proj Fora Ponta G</label>
+                                    <input type="text" name="kWhProjForaPontaG" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kW Proj G</label>
+                                    <input type="text" name="kWProjG" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Proj Diesel P</label>
+                                    <input type="text" name="kWhProjDieselP" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Compensado P</label>
+                                    <input type="text" name="kWhCompensadoP" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Compensado FP</label>
+                                    <input type="text" name="kWhCompensadoFP" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kWh Compensado Hr</label>
+                                    <input type="text" name="kWhCompensadoHr" placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>kW Geração Projetada</label>
+                                    <input type="text" name="kWGeracaoProjetada" placeholder="0.00">
+                                </div>
+                                <div class="input-group with-icon">
+                                    <label>Data de Registo</label>
+                                    <input type="text" name="DataRegistroHistorico" class="datepicker-input" readonly>
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button id="clear-historico-button" type="button" class="btn btn-clear">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                                <button id="save-historico-button" type="submit" class="btn btn-save">
+                                    <i class="fas fa-save"></i> Salvar Histórico
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="proposta" class="tab-content">
+                <div id="proposta-listing-screen" class="screen active">
+                    <div class="listing-screen">
+                        <div class="listing-header">
+                            <h2 class="listing-title">
+                                <i class="fas fa-file-invoice"></i> Propostas Cadastradas
+                            </h2>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" id="add-proposta-btn">
+                                    <i class="fas fa-plus"></i> Nova Proposta
+                                </button>
+                                <button class="btn btn-secondary" id="refresh-propostas-btn">
+                                    <i class="fas fa-sync-alt"></i> Atualizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <input type="text" class="filter-input" id="filter-propostas" placeholder="🔍 Filtrar propostas...">
+                        </div>
+
+                        <div class="table-container">
+                            <table id="propostas-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nº Proposta</th>
+                                        <th>Agente de Venda</th>
+                                        <th>Status</th>
+                                        <th>Data do Status</th>
+                                        <th>Lead/Unidade</th>
+                                        <th>Contato</th>
+                                        <th>Usuário</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="proposta-form-screen" class="screen">
+                    <div class="form-screen">
+                        <div class="form-header">
+                            <h2 class="form-title" id="proposta-form-title">
+                                <i class="fas fa-file-invoice"></i> Nova Proposta
+                            </h2>
+                            <button class="btn btn-back" id="proposta-back-btn">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </button>
+                        </div>
+
+                        <div class="form-subtitle">
+                            <p id="proposta-subtitle">Preencha os dados da proposta para o lead selecionado.</p>
+                        </div>
+
+                        <form id="proposta-form" autocomplete="off">
+                            <fieldset class="fieldset-full-width">
+                                <legend><i class="fas fa-user-check"></i> Seleção do Lead e Unidade</legend>
+                                <div class="form-grid">
+                                    <div class="input-group">
+                                        <label>Selecione o Lead</label>
+                                        <select id="proposta-lead-selector">
+                                            <option value="">Carregando leads...</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Selecione a Unidade Consumidora</label>
+                                        <select id="proposta-unidade-selector" disabled>
+                                            <option value="">Selecione um lead primeiro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="fieldset-full-width">
+                                <legend><i class="fas fa-file-alt"></i> Dados da Proposta</legend>
+                                <div class="form-grid">
+                                    <div class="input-group">
+                                        <label>Nº Proposta</label>
+                                        <input type="number" name="NProposta">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Agente de Venda</label>
+                                        <input type="text" name="AgenteDeVenda">
+                                    </div>
+                                    <div class="input-group with-icon">
+                                        <label>Data de Envio</label>
+                                        <input type="text" name="DataDeEnvio" class="datepicker-input" readonly>
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                    <div class="input-group with-icon">
+                                        <label>Data de Validade</label>
+                                        <input type="text" name="DataValidade" class="datepicker-input" readonly>
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                    <div class="input-group with-icon">
+                                        <label>Data Status Negociação</label>
+                                        <input type="text" name="DataStatusNegociacao" class="datepicker-input" readonly>
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label>Status da Negociação</label>
+                                    <textarea name="StatusNegociacao" rows="3"></textarea>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="fieldset-full-width">
+                                <legend><i class="fas fa-address-card"></i> Contato da Proposta</legend>
+                                <div class="form-grid">
+                                    <div class="input-group">
+                                        <label>Nome do Contato</label>
+                                        <input type="text" name="NomeContato">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Departamento</label>
+                                        <input type="text" name="DepartamentoContato">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Email</label>
+                                        <input type="email" name="EmailContato">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Telefone</label>
+                                        <input type="tel" name="TelefoneContato">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Celular</label>
+                                        <input type="tel" name="CelularContato">
+                                    </div>
+                                </div>
+                            </fieldset>
+                            
+                            <fieldset class="fieldset-full-width">
+                                <legend><i class="fas fa-sticky-note"></i> Observações</legend>
+                                <div class="form-grid">
+                                    <div class="input-group">
+                                        <label>Observação</label>
+                                        <textarea name="Observacao" rows="4"></textarea>
+                                    </div>
+                                    <div class="input-group with-icon">
+                                        <label>Data da Observação</label>
+                                        <input type="text" name="DataObservacao" class="datepicker-input" readonly>
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Usuário</label>
+                                        <input type="text" name="UsuarioObs">
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="form-actions">
+                                <button id="clear-proposta-button" type="button" class="btn btn-clear">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                                <button id="save-proposta-button" type="submit" class="btn btn-save">
+                                    <i class="fas fa-save"></i> Salvar Proposta
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="simulacao" class="tab-content">
+                <div class="container">
+                    <header class="main-header">
+                        <h1><i class="fas fa-calculator"></i> Simulação de Custos de Energia</h1>
+                        <p>Compare o custo atual com uma proposta para o Mercado Livre de Energia.</p>
+                    </header>
+            
+                    <div class="simulacao-grid">
+                        <div class="card cenario-atual">
+                            <h2>Cenário Atual (Mercado Cativo)</h2>
+                            <div class="info-group">
+                                <label>Modalidade Tarifária:</label>
+                                <span id="atual-modalidade">Azul</span>
+                            </div>
+                            <div class="info-group">
+                                <label>Subgrupo:</label>
+                                <span id="atual-subgrupo">A4</span>
+                            </div>
+                            <div class="info-group">
+                                <label>ICMS (%):</label>
+                                <span id="atual-icms">18.00</span>
+                            </div>
+                            
+                            <h3>Histórico de Consumo (Últimos 12 Meses)</h3>
+                            <div class="table-container">
+                                <table id="historico-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Mês</th>
+                                            <th>Consumo Ponta (kWh)</th>
+                                            <th>Consumo Fora Ponta (kWh)</th>
+                                            <th>Demanda Medida Ponta (kW)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historico-tbody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+            
+                        <div class="card cenario-simulado">
+                            <h2>Cenário Simulado (Mercado Livre)</h2>
+                            <form id="simulacao-form">
+                                <div class="input-group">
+                                    <label for="preco-energia">Preço da Energia (R$/MWh)</label>
+                                    <input type="number" id="preco-energia" value="550.00" step="0.01" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="demanda-ponta">Nova Demanda Contratada Ponta (kW)</label>
+                                    <input type="number" id="demanda-ponta" value="100" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="demanda-fp">Nova Demanda Contratada Fora Ponta (kW)</label>
+                                    <input type="number" id="demanda-fp" value="500" required>
+                                </div>
+                                <button type="submit" id="calcular-btn" class="btn-calcular">
+                                    <i class="fas fa-play-circle"></i> Calcular Simulação
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+            
+                    <div id="resultados-container" class="hidden">
+                        <h3>Resultados da Simulação</h3>
+                        <div class="resultados-grid">
+                            <div class="card-resultado">
+                                <h4>Custo Anual Atual</h4>
+                                <p id="resultado-custo-atual">R$ 0,00</p>
+                            </div>
+                            <div class="card-resultado">
+                                <h4>Custo Anual Simulado</h4>
+                                <p id="resultado-custo-simulado">R$ 0,00</p>
+                            </div>
+                            <div class="card-resultado economia">
+                                <h4>Economia Anual Estimada</h4>
+                                <p id="resultado-economia-reais">R$ 0,00</p>
+                                <span id="resultado-economia-percentual">(0.00%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashboard" class="tab-content">
+                 <main class="container">
+                    <header class="report-header">
+                        <h1><i class="fas fa-chart-pie"></i> Análise de Viabilidade Econômica</h1>
+                        <p>
+                            Relatório para: <strong id="report-lead-name">[Nome do Lead]</strong> | 
+                            Unidade: <strong id="report-unit-name">[Número/Nome da Unidade]</strong>
+                        </p>
+                    </header>
+            
+                    <section class="resultados-grid">
+                        <div class="card-resultado custo-atual">
+                            <h4>Custo Anual Projetado (Mercado Cativo)</h4>
+                            <p id="resultado-custo-atual">R$ 0,00</p>
+                            <span>Baseado no histórico de 12 meses</span>
+                        </div>
+                        <div class="card-resultado custo-simulado">
+                            <h4>Custo Anual Simulado (Mercado Livre)</h4>
+                            <p id="resultado-custo-simulado">R$ 0,00</p>
+                            <span>Com base nos parâmetros da proposta</span>
+                        </div>
+                        <div class="card-resultado economia">
+                            <h4>Sua Economia Anual</h4>
+                            <p id="resultado-economia-reais">R$ 0,00</p>
+                            <span id="resultado-economia-percentual">(0,00%)</span>
+                        </div>
+                    </section>
+            
+                    <section class="widget">
+                        <h3><i class="fas fa-chart-bar"></i> Comparativo de Custo Mensal</h3>
+                        <div class="chart-container">
+                            <canvas id="simulador-grafico-economia"></canvas>
+                        </div>
+                    </section>
+            
+                    <section class="widget">
+                        <h3><i class="fas fa-list-ol"></i> Detalhamento Mês a Mês</h3>
+                        <div class="table-container">
+                            <table id="detalhes-simulacao-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mês</th>
+                                        <th>Custo Atual (R$)</th>
+                                        <th>Custo Simulado (R$)</th>
+                                        <th class="coluna-economia">Economia (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detalhes-tbody">
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th>Total Anual</th>
+                                        <td id="total-atual">R$ 0,00</td>
+                                        <td id="total-simulado">R$ 0,00</td>
+                                        <td class="coluna-economia" id="total-economia">R$ 0,00</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </section>
+            
+                    <footer class="report-actions">
+                        <button class="btn btn-save">
+                            <i class="fas fa-save"></i> Salvar na Proposta
+                        </button>
+                        <button class="btn btn-secondary">
+                            <i class="fas fa-file-pdf"></i> Gerar PDF
+                        </button>
+                    </footer>
+                </main>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="vendedor-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-tie"></i> Vendedor e Contato</h2>
+                <button id="close-vendedor-modal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="vendedor-contato-form">
+                    <fieldset>
+                        <legend>Vendedor Responsável</legend>
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Vendedor*</label>
+                                <input type="text" name="Vendedor">
+                            </div>
+                            <div class="input-group with-icon">
+                                <label>Data de Envio*</label>
+                                <input type="text" name="DataEnvio" class="datepicker-input" readonly placeholder="Clique para selecionar">
+                                <i class="fa-solid fa-calendar-days"></i>
+                            </div>
+                            <div class="input-group with-icon">
+                                <label>Validade do Lead*</label>
+                                <input type="text" name="DataValidade" class="datepicker-input" readonly placeholder="Clique para selecionar">
+                                <i class="fa-solid fa-calendar-days"></i>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Contato Principal</legend>
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Nome do Contato*</label>
+                                <input type="text" name="NomeContato">
+                            </div>
+                            <div class="input-group">
+                                <label>E-mail</label>
+                                <input type="email" name="Email">
+                            </div>
+                            <div class="input-group">
+                                <label>Telefone</label>
+                                <input type="tel" name="Telefone">
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="save-vendedor-contato" type="submit" form="vendedor-contato-form" class="btn btn-save">
+                    <i class="fas fa-save"></i> Salvar Informações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="calendar-modal" class="modal-overlay hidden">
+        <div class="modal-content" id="calendar-container">
+            <div id="calendar-wrapper">
+                </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <script src="script.js"></script>
+</html>
