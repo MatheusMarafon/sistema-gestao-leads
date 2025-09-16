@@ -702,85 +702,169 @@
             </div>
 
             <div id="simulacao" class="tab-content">
-                <div class="container">
-                    <header class="main-header">
-                        <h1><i class="fas fa-calculator"></i> Simulação de Custos de Energia</h1>
-                        <p>Compare o custo atual com uma proposta para o Mercado Livre de Energia.</p>
-                    </header>
-            
-                    <div class="simulacao-grid">
-                        <div class="card cenario-atual">
-                            <h2>Cenário Atual (Mercado Cativo)</h2>
-                            <div class="info-group">
-                                <label>Modalidade Tarifária:</label>
-                                <span id="atual-modalidade">Azul</span>
-                            </div>
-                            <div class="info-group">
-                                <label>Subgrupo:</label>
-                                <span id="atual-subgrupo">A4</span>
-                            </div>
-                            <div class="info-group">
-                                <label>ICMS (%):</label>
-                                <span id="atual-icms">18.00</span>
+                <div class="simulacao-acr-container">
+                    <div class="simulacao-header">
+                        <h1 class="titulo">Simulação ACR</h1>
+                        <p class="subtitulo">
+                            Selecione os parâmetros para calcular os custos projetados.
+                        </p>
+                    </div>
+
+                    <div class="simulacao-card">
+                        <div class="simulacao-card-header">
+                            <h2 class="simulacao-card-titulo">
+                                <i class="fas fa-file-alt"></i>
+                                Parâmetros da Simulação
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="simulacao-grid-col-2">
+                                <div class="simulacao-input-group" style="grid-column: 1 / -1;">
+                                    <label style="text-align: center; margin-bottom: 5px; font-weight: 600;">Tipo de Simulação</label>
+                                    <div class="radio-group">
+                                        <label for="tipo-cliente">
+                                            <input type="radio" id="tipo-cliente" name="tipo_simulacao" value="cliente" checked> Cliente Existente
+                                        </label>
+                                        <label for="tipo-lead">
+                                            <input type="radio" id="tipo-lead" name="tipo_simulacao" value="lead"> Novo Lead (Estimado)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="simulacao-input-group">
+                                    <label>Lead / Cliente</label>
+                                    <select id="simulacao-lead-selector">
+                                        <option value="">Selecione...</option>
+                                    </select>
+                                </div>
+                                <div class="simulacao-input-group">
+                                    <label>Unidade Consumidora</label>
+                                    <select id="simulacao-unidade-selector" disabled>
+                                        <option value="">Selecione um lead/cliente</option>
+                                    </select>
+                                </div>
                             </div>
                             
-                            <h3>Histórico de Consumo (Últimos 12 Meses)</h3>
+                            <fieldset class="periodo-container">
+                                <legend><i class="fas fa-calendar-alt"></i> Período da Simulação</legend>
+                                <div class="periodo-rapido-botoes">
+                                    <button class="btn-periodo-rapido" data-meses="12">Próximos 12 meses</button>
+                                    <button class="btn-periodo-rapido" data-meses="24">24 meses</button>
+                                    <button class="btn-periodo-rapido" data-meses="36">36 meses</button>
+                                </div>
+                                <div class="periodo-datas">
+                                    <div class="input-group with-icon">
+                                        <label>Data de Início</label>
+                                        <input type="text" id="simulacao-data-inicio" class="datepicker-input" readonly placeholder="dd/mm/aaaa">
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                    <div class="input-group with-icon">
+                                        <label>Data de Fim</label>
+                                        <input type="text" id="simulacao-data-fim" class="datepicker-input" readonly placeholder="dd/mm/aaaa">
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+
+                            <div id="simulacao-lead-inputs" class="hidden">
+                                <h4 class="dados-titulo"><i class="fas fa-keyboard"></i> Inserir Dados para Novo Lead</h4>
+                                <div class="simulacao-grid-col-2">
+                                     <div class="simulacao-input-group">
+                                        <label>Consumo Mensal Estimado (kWh)</label>
+                                        <input type="number" id="lead-consumo-estimado" placeholder="Ex: 5000">
+                                    </div>
+                                     <div class="simulacao-input-group">
+                                        <label>Demanda Estimada (kW)</label>
+                                        <input type="number" id="lead-demanda-estimada" placeholder="Ex: 30">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="simulacao-dados-automaticos" class="dados-resumo hidden">
+                                <h4 class="dados-titulo"><i class="fas fa-bolt"></i> Dados da Unidade Selecionada</h4>
+                                <div class="simulacao-grid-col-3">
+                                    <div><span class="label-info">Tarifa:</span><span id="simulacao-info-tarifa" class="badge">--</span></div>
+                                    <div><span class="label-info">Subgrupo:</span><span id="simulacao-info-demanda" class="info-valor">--</span></div>
+                                    <div><span class="label-info">Impostos:</span><span id="simulacao-info-impostos" class="info-valor">--</span></div>
+                                    <div><span class="label-info">Mercado:</span><span id="simulacao-info-mercado" class="info-valor">--</span></div>
+                                </div>
+                            </div>
+
+                            <div class="btn-container">
+                                <button id="simulacao-calcular-btn" class="btn-principal" disabled>
+                                    <i id="simulacao-btn-icon" class="fas fa-calculator"></i>
+                                    <span id="simulacao-btn-text">Calcular Custo</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="simulacao-historico-container" class="simulacao-card hidden">
+                        <div class="simulacao-card-header">
+                            <h2 class="simulacao-card-titulo">
+                                <i class="fas fa-chart-line"></i> Histórico de Consumo (Últimos 13 Meses)
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <canvas id="simulacao-historico-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div id="simulacao-resultado-container" class="simulacao-card card-resultado hidden">
+                        <div class="simulacao-card-header text-center">
+                            <h2 class="simulacao-card-titulo"><i class="fas fa-chart-line"></i> Resultado da Simulação</h2>
+                            <p id="simulacao-resultado-descricao" class="simulacao-card-descricao">Análise para...</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="resultado-principal">
+                                <div id="simulacao-label-custo-total" class="label-info">Custo Total no Período</div>
+                                <div id="simulacao-resultado-custo-anual" class="valor-principal">R$ 0,00</div>
+                            </div>
+                            <div class="simulacao-grid-col-3">
+                                <div class="metrica">
+                                    <div class="label-info">Custo Médio Mensal</div>
+                                    <div id="simulacao-resultado-custo-mensal" class="valor-secundario">R$ 0,00</div>
+                                </div>
+                                <div class="metrica">
+                                    <div class="label-info">Consumo Total no Período</div>
+                                    <div id="simulacao-resultado-consumo-anual" class="valor-secundario">0 kWh</div>
+                                </div>
+                                <div class="metrica">
+                                    <div class="label-info">Demanda Média</div>
+                                    <div id="simulacao-resultado-demanda-media" class="valor-secundario">0 kW</div>
+                                </div>
+                            </div>
+                            <hr class="separator">
+                            <div class="btn-container">
+                                <button id="simulacao-toggle-detalhes-btn" class="btn-secundario">Ver Detalhes Mensais</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="simulacao-tabela-detalhada-container" class="simulacao-card hidden">
+                        <div class="simulacao-card-header">
+                            <h2 class="simulacao-card-titulo">Detalhamento Mensal Projetado</h2>
+                        </div>
+                        <div class="card-content">
                             <div class="table-container">
-                                <table id="historico-table">
+                                <table>
                                     <thead>
                                         <tr>
                                             <th>Mês</th>
-                                            <th>Consumo Ponta (kWh)</th>
-                                            <th>Consumo Fora Ponta (kWh)</th>
-                                            <th>Demanda Medida Ponta (kW)</th>
+                                            <th class="text-right">Consumo (kWh)</th>
+                                            <th class="text-right">Demanda (kW)</th>
+                                            <th class="text-right">Custo Consumo</th>
+                                            <th class="text-right">Custo Demanda</th>
+                                            <th class="text-right">Impostos</th>
+                                            <th class="text-right font-semibold">Total</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="historico-tbody">
-                                    </tbody>
+                                    <tbody id="simulacao-tabela-detalhada-tbody"></tbody>
                                 </table>
                             </div>
                         </div>
-            
-                        <div class="card cenario-simulado">
-                            <h2>Cenário Simulado (Mercado Livre)</h2>
-                            <form id="simulacao-form">
-                                <div class="input-group">
-                                    <label for="preco-energia">Preço da Energia (R$/MWh)</label>
-                                    <input type="number" id="preco-energia" value="550.00" step="0.01" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="demanda-ponta">Nova Demanda Contratada Ponta (kW)</label>
-                                    <input type="number" id="demanda-ponta" value="100" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="demanda-fp">Nova Demanda Contratada Fora Ponta (kW)</label>
-                                    <input type="number" id="demanda-fp" value="500" required>
-                                </div>
-                                <button type="submit" id="calcular-btn" class="btn-calcular">
-                                    <i class="fas fa-play-circle"></i> Calcular Simulação
-                                </button>
-                            </form>
-                        </div>
                     </div>
-            
-                    <div id="resultados-container" class="hidden">
-                        <h3>Resultados da Simulação</h3>
-                        <div class="resultados-grid">
-                            <div class="card-resultado">
-                                <h4>Custo Anual Atual</h4>
-                                <p id="resultado-custo-atual">R$ 0,00</p>
-                            </div>
-                            <div class="card-resultado">
-                                <h4>Custo Anual Simulado</h4>
-                                <p id="resultado-custo-simulado">R$ 0,00</p>
-                            </div>
-                            <div class="card-resultado economia">
-                                <h4>Economia Anual Estimada</h4>
-                                <p id="resultado-economia-reais">R$ 0,00</p>
-                                <span id="resultado-economia-percentual">(0.00%)</span>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             </div>
 
@@ -831,8 +915,7 @@
                                         <th class="coluna-economia">Economia (R$)</th>
                                     </tr>
                                 </thead>
-                                <tbody id="detalhes-tbody">
-                                </tbody>
+                                <tbody id="detalhes-tbody"></tbody>
                                 <tfoot>
                                     <tr>
                                         <th>Total Anual</th>
@@ -920,5 +1003,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <script src="script.js"></script>
+</body>
 </html>

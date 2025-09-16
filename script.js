@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- I. CONSTANTES E SELETORES GLOBAIS (CORRIGIDOS) ---
+    // --- I. CONSTANTES E SELETORES GLOBAIS ---
     const API_URL = 'http://127.0.0.1:5000';
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -67,23 +67,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarModal = document.getElementById('calendar-modal');
     const calendarWrapper = document.getElementById('calendar-wrapper');
 
-    // Módulo de Simulação (Seletores específicos para evitar conflito)
-    const simulacaoTab = document.getElementById('simulacao');
-    const simuHistoricoTbody = simulacaoTab.querySelector('#historico-tbody');
-    const simulacaoForm = simulacaoTab.querySelector('#simulacao-form');
-    const simuResultadosContainer = simulacaoTab.querySelector('#resultados-container');
-    const precoEnergiaInput = simulacaoTab.querySelector('#preco-energia');
-    const demandaPontaInput = simulacaoTab.querySelector('#demanda-ponta');
-    const demandaFPInput = simulacaoTab.querySelector('#demanda-fp');
-    const simuResultadoCustoAtual = simulacaoTab.querySelector('#resultado-custo-atual');
-    const simuResultadoCustoSimulado = simulacaoTab.querySelector('#resultado-custo-simulado');
-    const simuResultadoEconomiaReais = simulacaoTab.querySelector('#resultado-economia-reais');
-    const simuResultadoEconomiaPercentual = simulacaoTab.querySelector('#resultado-economia-percentual');
-    const atualModalidadeSpan = simulacaoTab.querySelector('#atual-modalidade');
-    const atualSubgrupoSpan = simulacaoTab.querySelector('#atual-subgrupo');
-    const atualIcmsSpan = simulacaoTab.querySelector('#atual-icms');
+    // Módulo de Simulação (ACR)
+    const simulacaoLeadSelector = document.getElementById('simulacao-lead-selector');
+    const simulacaoUnidadeSelector = document.getElementById('simulacao-unidade-selector');
+    const simulacaoCalcularBtn = document.getElementById('simulacao-calcular-btn');
+    const simulacaoBtnIcon = document.getElementById('simulacao-btn-icon');
+    const simulacaoBtnText = document.getElementById('simulacao-btn-text');
+    const simulacaoDadosAutomaticos = document.getElementById('simulacao-dados-automaticos');
+    const simulacaoInfoTarifa = document.getElementById('simulacao-info-tarifa');
+    const simulacaoInfoDemanda = document.getElementById('simulacao-info-demanda');
+    const simulacaoInfoImpostos = document.getElementById('simulacao-info-impostos');
+    const simulacaoResultadoContainer = document.getElementById('simulacao-resultado-container');
+    const simulacaoResultadoDescricao = document.getElementById('simulacao-resultado-descricao');
+    const simulacaoLabelCustoTotal = document.getElementById('simulacao-label-custo-total');
+    const simulacaoResultadoCustoAnual = document.getElementById('simulacao-resultado-custo-anual');
+    const simulacaoResultadoCustoMensal = document.getElementById('simulacao-resultado-custo-mensal');
+    const simulacaoResultadoConsumoAnual = document.getElementById('simulacao-resultado-consumo-anual');
+    const simulacaoResultadoDemandaMedia = document.getElementById('simulacao-resultado-demanda-media');
+    const simulacaoToggleDetalhesBtn = document.getElementById('simulacao-toggle-detalhes-btn');
+    const simulacaoTabelaDetalhadaContainer = document.getElementById('simulacao-tabela-detalhada-container');
+    const simulacaoTabelaDetalhadaTbody = document.getElementById('simulacao-tabela-detalhada-tbody');
+    const tipoSimulacaoRadios = document.querySelectorAll('input[name="tipo_simulacao"]');
+    const simulacaoLeadInputsContainer = document.getElementById('simulacao-lead-inputs');
+    const simulacaoDataInicioInput = document.getElementById('simulacao-data-inicio');
+    const simulacaoDataFimInput = document.getElementById('simulacao-data-fim');
+    const periodoRapidoBtns = document.querySelectorAll('.btn-periodo-rapido');
+    const simulacaoHistoricoContainer = document.getElementById('simulacao-historico-container');
+    const simulacaoHistoricoChartCanvas = document.getElementById('simulacao-historico-chart').getContext('2d');
+    const simulacaoInfoMercado = document.getElementById('simulacao-info-mercado');
 
-    // Módulo de Análise/Dashboard (Seletores específicos para evitar conflito)
+    // Módulo de Análise/Dashboard
     const dashboardTab = document.getElementById('dashboard');
     const reportLeadName = dashboardTab.querySelector('#report-lead-name');
     const reportUnitName = dashboardTab.querySelector('#report-unit-name');
@@ -95,11 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalAtual = dashboardTab.querySelector('#total-atual');
     const totalSimulado = dashboardTab.querySelector('#total-simulado');
     const totalEconomia = dashboardTab.querySelector('#total-economia');
-    const ctx = dashboardTab.querySelector('#simulador-grafico-economia').getContext('2d');
+    const ctxDashboard = dashboardTab.querySelector('#simulador-grafico-economia').getContext('2d');
 
     // --- II. ESTADO GLOBAL DA APLICAÇÃO ---
     let debounceTimer;
     let modoEdicao = { lead: false, unidade: false, historico: false };
+    let historicoChartInstance = null;
+    let dashboardChartInstance = null;
     
     let estadoAtual = {
         lead: { id: null, razaoSocial: null },
@@ -107,10 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     let dadosDaSimulacao = {
-        lead: null,
-        unidade: null,
-        historico: [],
-        resultados: null
+        resultados: null,
+        parametros: null // Para guardar os parâmetros da última simulação
     };
 
     // --- III. FUNÇÕES GLOBAIS ---
@@ -122,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnAtivo) btnAtivo.classList.add('active');
         if (conteudoAtivo) conteudoAtivo.classList.add('active');
 
-        // Lógica para carregar dados ao trocar para as abas
         if (abaId === 'unidades') carregarLeadsEmSeletor(unidadeSelector);
         else if (abaId === 'historico') carregarLeadsEmSeletor(historicoLeadSelector);
         else if (abaId === 'proposta') carregarLeadsEmSeletor(propostaLeadSelector);
@@ -158,7 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatarData(isoString) {
         if (!isoString) return '';
         const data = new Date(isoString);
-        return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const userTimezoneOffset = data.getTimezoneOffset() * 60000;
+        return new Date(data.getTime() + userTimezoneOffset).toLocaleDateString('pt-BR');
     }
 
     function formatarCpfCnpj(valor) {
@@ -174,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return valor;
     }
 
-    // --- IV. LÓGICA DE LEADS, UNIDADES, HISTÓRICO, PROPOSTAS (CÓDIGO ORIGINAL) ---
+    // --- IV. LÓGICA DE LEADS, UNIDADES, HISTÓRICO, PROPOSTAS ---
     async function carregarLeads(filtro = '') {
         leadsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">A carregar...</td></tr>`;
         const url = `${API_URL}/api/leads?filtro=${encodeURIComponent(filtro)}`;
@@ -637,6 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const option = document.createElement('option');
                 option.value = unidade.NumeroDaUcLead;
                 option.textContent = `${unidade.NumeroDaUcLead} - ${unidade.NomeDaUnidade || 'Sem Nome'}`;
+                option.dataset.unidade = JSON.stringify(unidade);
                 seletorDeUnidade.appendChild(option);
             });
             seletorDeUnidade.disabled = false;
@@ -677,17 +691,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) { console.error("Erro ao procurar CEP da unidade:", error); }
     }
-    
+
     async function carregarEstados(selectElement) {
         if (!selectElement) return;
+        
+        const cepInputs = document.querySelectorAll('input[name="Cep"], input[id="cep"]');
+        cepInputs.forEach(input => input.disabled = true);
+    
         try {
             const response = await fetch(`${API_URL}/api/localidades/estados`);
             const estados = await response.json();
             selectElement.innerHTML = '<option value="">Selecione...</option>';
             estados.forEach(uf => selectElement.innerHTML += `<option value="${uf}">${uf}</option>`);
-        } catch (error) { selectElement.innerHTML = '<option value="">Erro</option>'; }
+            
+            cepInputs.forEach(input => input.disabled = false);
+    
+        } catch (error) { 
+            selectElement.innerHTML = '<option value="">Erro ao carregar</option>'; 
+            console.error("Erro ao carregar estados:", error);
+        }
     }
-
+    
     async function carregarCidades(uf, cidadeParaSelecionar = null, ufSelectElem, cidadeSelectElem) {
         if (!cidadeSelectElem) return;
         if (!uf) {
@@ -695,28 +719,38 @@ document.addEventListener('DOMContentLoaded', () => {
             cidadeSelectElem.disabled = true;
             return;
         }
+        
         cidadeSelectElem.disabled = false;
-        cidadeSelectElem.innerHTML = '<option value="">A carregar...</option>';
+        cidadeSelectElem.innerHTML = '<option value="">Carregando...</option>';
+        
         try {
             const response = await fetch(`${API_URL}/api/localidades/cidades/${uf}`);
             const cidades = await response.json();
             cidadeSelectElem.innerHTML = '<option value="">Selecione...</option>';
             cidades.forEach(cidade => {
                 const option = document.createElement('option');
-                option.value = cidade.Codigo;
+                option.value = cidade.Codigo; 
                 option.textContent = cidade.Cidade;
                 cidadeSelectElem.appendChild(option);
             });
+    
             if (cidadeParaSelecionar) {
-                const optByValue = Array.from(cidadeSelectElem.options).find(o => o.value == cidadeParaSelecionar);
-                if (optByValue) {
-                    cidadeSelectElem.value = optByValue.value;
+                const nomeCidadeNormalizado = cidadeParaSelecionar.trim().toUpperCase();
+                
+                const optByText = Array.from(cidadeSelectElem.options).find(
+                    o => o.text.trim().toUpperCase() === nomeCidadeNormalizado
+                );
+                
+                if (optByText) {
+                    cidadeSelectElem.value = optByText.value;
                 } else {
-                    const optByText = Array.from(cidadeSelectElem.options).find(o => o.text === cidadeParaSelecionar);
-                    if (optByText) cidadeSelectElem.value = optByText.value;
+                     console.warn(`Cidade "${cidadeParaSelecionar}" não encontrada na lista para a UF ${uf}.`);
                 }
             }
-        } catch (error) { cidadeSelectElem.innerHTML = '<option value="">Erro</option>'; }
+        } catch (error) { 
+            cidadeSelectElem.innerHTML = '<option value="">Erro ao carregar</option>'; 
+            console.error("Erro ao carregar cidades:", error);
+        }
     }
     
     async function carregarPropostas(filtro = '') {
@@ -781,172 +815,138 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- V. LÓGICA DA ABA DE SIMULAÇÃO (DINÂMICA) ---
     async function iniciarAbaSimulacao() {
-        simuResultadosContainer.classList.add('hidden');
-        if (!estadoAtual.unidade.id || !estadoAtual.unidade.dados) {
-            simuHistoricoTbody.innerHTML = `<tr><td colspan="4" class="text-center">Por favor, selecione uma unidade na aba <strong>"Unidades Lead"</strong> primeiro.</td></tr>`;
-            atualSubgrupoSpan.textContent = '-';
-            atualIcmsSpan.textContent = '-';
-            atualModalidadeSpan.textContent = '-';
-            return;
-        }
-        const unidade = estadoAtual.unidade.dados;
-        atualSubgrupoSpan.textContent = unidade.SubgrupoTarifario || 'Não informado';
-        atualIcmsSpan.textContent = parseFloat(unidade.AliquotaICMS || '0').toFixed(2);        
-        atualModalidadeSpan.textContent = 'Azul';
-        try {
-            const response = await fetch(`${API_URL}/api/unidades/${estadoAtual.unidade.id}/historico`);
-            if (!response.ok) throw new Error('Não foi possível carregar o histórico da unidade.');
-            const historico = await response.json();
-            if (historico.length === 0) {
-                simuHistoricoTbody.innerHTML = `<tr><td colspan="4" class="text-center">Nenhum histórico de consumo encontrado para esta unidade.</td></tr>`;
-                dadosDaSimulacao.historico = [];
-                return;
-            }
-            dadosDaSimulacao.historico = historico;
-            dadosDaSimulacao.unidade = estadoAtual.unidade;
-            dadosDaSimulacao.lead = estadoAtual.lead;
-            simuHistoricoTbody.innerHTML = '';
-            historico.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${item.IDMes}</td>
-                    <td>${formatNumber(item.kWhProjPonta)}</td>
-                    <td>${formatNumber(item.kWhProjForaPonta)}</td>
-                    <td>${formatNumber(item.DemandaCP)}</td>
-                `;
-                simuHistoricoTbody.appendChild(tr);
-            });
-        } catch (error) {
-            console.error("Erro ao iniciar simulação:", error);
-            simuHistoricoTbody.innerHTML = `<tr><td colspan="4" class="text-center" style="color:red;">${error.message}</td></tr>`;
-        }
-    }
-
-    function executarSimulacao(event) {
-        event.preventDefault();
-        if (!dadosDaSimulacao.historico || dadosDaSimulacao.historico.length === 0) {
-            alert("Não há dados de histórico para calcular. Selecione uma unidade com histórico válido.");
-            return;
-        }
-        const paramsAtuais = {
-            demanda_contratada_p: 100,
-            tarifa_demanda_p: 45.50,
-            tarifa_ultrapassagem_demanda_p: 91.00,
-            tarifa_consumo_p: 0.85,
-            tarifa_consumo_fp: 0.55,
-            impostos_percentual: parseFloat(estadoAtual.unidade.dados.AliquotaICMS) || 18
-        };
-        const paramsSimulados = {
-            preco_energia: parseFloat(precoEnergiaInput.value),
-            demanda_contratada_p: parseFloat(demandaPontaInput.value),
-            demanda_contratada_fp: parseFloat(demandaFPInput.value),
-            tarifa_fio_p: 25.00,
-            tarifa_fio_fp: 15.00,
-            impostos_percentual: parseFloat(estadoAtual.unidade.dados.AliquotaICMS) || 18
-        };
-        const resultadosMensaisAtuais = calcularCustosAtuais(dadosDaSimulacao.historico, paramsAtuais);
-        const resultadosMensaisSimulados = calcularCustosSimulados(dadosDaSimulacao.historico, paramsSimulados);
-        const totalAnualAtual = resultadosMensaisAtuais.reduce((acc, mes) => acc + mes.custo, 0);
-        const totalAnualSimulado = resultadosMensaisSimulados.reduce((acc, mes) => acc + mes.custo, 0);
-        const economiaReais = totalAnualAtual - totalAnualSimulado;
-        const economiaPercentual = totalAnualAtual !== 0 ? (economiaReais / totalAnualAtual) * 100 : 0;
-        dadosDaSimulacao.resultados = {
-            totais: {
-                atual: totalAnualAtual,
-                simulado: totalAnualSimulado,
-                economiaReais: economiaReais,
-                economiaPercentual: economiaPercentual
-            },
-            mensais: dadosDaSimulacao.historico.map((item, index) => ({
-                mes: item.IDMes,
-                custoAtual: resultadosMensaisAtuais[index].custo,
-                custoSimulado: resultadosMensaisSimulados[index].custo,
-                economia: resultadosMensaisAtuais[index].custo - resultadosMensaisSimulados[index].custo
-            }))
-        };
-        simuResultadoCustoAtual.innerText = formatarMoeda(totalAnualAtual);
-        simuResultadoCustoSimulado.innerText = formatarMoeda(totalAnualSimulado);
-        simuResultadoEconomiaReais.innerText = formatarMoeda(economiaReais);
-        simuResultadoEconomiaPercentual.innerText = `(${economiaPercentual.toFixed(2)}%)`;
-        simuResultadosContainer.classList.remove('hidden');
-        mudarAba('dashboard');
+        simulacaoUnidadeSelector.innerHTML = '<option value="">Selecione um lead primeiro</option>';
+        simulacaoUnidadeSelector.disabled = true;
+        simulacaoCalcularBtn.disabled = true;
+        simulacaoDadosAutomaticos.classList.add('hidden');
+        simulacaoResultadoContainer.classList.add('hidden');
+        simulacaoTabelaDetalhadaContainer.classList.add('hidden');
+        simulacaoHistoricoContainer.classList.add('hidden');
+        simulacaoLeadInputsContainer.classList.add('hidden');
+        document.getElementById('tipo-cliente').checked = true;
+        
+        await carregarLeadsEmSeletor(simulacaoLeadSelector);
     }
     
-    function calcularCustosAtuais(historico, tarifas) {
-        return historico.map(mes => {
-            const consumo_p = parseFloat(mes.kWhProjPonta) || 0;
-            const consumo_fp = parseFloat(mes.kWhProjForaPonta) || 0;
-            const demanda_medida_p = parseFloat(mes.DemandaCP) || 0;
-            const custoConsumo = (consumo_p * tarifas.tarifa_consumo_p) + (consumo_fp * tarifas.tarifa_consumo_fp);
-            let custoDemanda = 0;
-            if (demanda_medida_p > tarifas.demanda_contratada_p) {
-                const ultrapassagem = demanda_medida_p - tarifas.demanda_contratada_p;
-                custoDemanda = (tarifas.demanda_contratada_p * tarifas.tarifa_demanda_p) + (ultrapassagem * tarifas.tarifa_ultrapassagem_demanda_p);
-            } else {
-                custoDemanda = tarifas.demanda_contratada_p * tarifas.tarifa_demanda_p;
+    function renderizarGraficoHistorico(historicoData) {
+        if (historicoChartInstance) {
+            historicoChartInstance.destroy();
+        }
+
+        const dadosOrdenados = historicoData.sort((a, b) => String(a.IDMes).localeCompare(String(b.IDMes))).slice(-13);
+
+        const labels = dadosOrdenados.map(h => h.IDMes);
+        const consumoData = dadosOrdenados.map(h => {
+            const consumoP = parseFloat(h.kWhProjPonta) || 0;
+            const consumoFP = parseFloat(h.kWhProjForaPonta) || 0;
+            return consumoP + consumoFP;
+        });
+
+        historicoChartInstance = new Chart(simulacaoHistoricoChartCanvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Consumo (kWh)',
+                    data: consumoData,
+                    borderColor: '#059BE2',
+                    backgroundColor: 'rgba(5, 155, 226, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Consumo (kWh)' }
+                    }
+                }
             }
-            const subtotal = custoConsumo + custoDemanda;
-            const totalComImpostos = subtotal / (1 - (tarifas.impostos_percentual / 100));
-            return { mes: mes.IDMes, custo: totalComImpostos };
         });
     }
 
-    function calcularCustosSimulados(historico, tarifas) {
-        return historico.map(mes => {
-            const consumo_p = parseFloat(mes.kWhProjPonta) || 0;
-            const consumo_fp = parseFloat(mes.kWhProjForaPonta) || 0;
-            const consumoTotalMWh = (consumo_p + consumo_fp) / 1000;
-            const custoEnergia = consumoTotalMWh * tarifas.preco_energia;
-            const custoDemanda = (tarifas.demanda_contratada_p * tarifas.tarifa_fio_p);
-            const subtotal = custoEnergia + custoDemanda;
-            const totalComImpostos = subtotal / (1 - (tarifas.impostos_percentual / 100));
-            return { mes: mes.IDMes, custo: totalComImpostos };
+    function exibirResultadosSimulacao(resultados) {
+        const leadSelecionado = simulacaoLeadSelector.options[simulacaoLeadSelector.selectedIndex].text;
+        const unidadeSelecionada = simulacaoUnidadeSelector.options[simulacaoUnidadeSelector.selectedIndex].text;
+        
+        const duracaoLabel = Math.round(resultados.totais.duracao_meses);
+
+        simulacaoLabelCustoTotal.textContent = `Custo Total em ${duracaoLabel} Meses`;
+        simulacaoResultadoDescricao.textContent = `Análise para: ${leadSelecionado} | Unidade: ${unidadeSelecionada}`;
+        simulacaoResultadoCustoAnual.textContent = formatarMoeda(resultados.totais.custo_total_periodo);
+        simulacaoResultadoCustoMensal.textContent = formatarMoeda(resultados.totais.custo_medio_mensal);
+        simulacaoResultadoConsumoAnual.textContent = `${formatNumber(resultados.totais.consumo_total_periodo)} kWh`;
+        simulacaoResultadoDemandaMedia.textContent = `${formatNumber(resultados.totais.demanda_media)} kW`;
+        
+        simulacaoTabelaDetalhadaTbody.innerHTML = '';
+        resultados.detalhes_mensais.forEach(mes => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${mes.mes}</td>
+                <td class="text-right">${formatNumber(mes.consumo_total_kwh)}</td>
+                <td class="text-right">${formatNumber(mes.demanda_total_kw)}</td>
+                <td class="text-right">${formatarMoeda(mes.custo_consumo)}</td>
+                <td class="text-right">${formatarMoeda(mes.custo_demanda)}</td>
+                <td class="text-right">${formatarMoeda(mes.custo_impostos)}</td>
+                <td class="text-right font-semibold">${formatarMoeda(mes.custo_total_mes)}</td>
+            `;
+            simulacaoTabelaDetalhadaTbody.appendChild(tr);
         });
+    
+        simulacaoResultadoContainer.classList.remove('hidden');
     }
 
     // --- VI. LÓGICA DA ABA DE DASHBOARD (DINÂMICA) ---
-    function atualizarDashboard() {
-        if (!dadosDaSimulacao.resultados) {
-            reportLeadName.textContent = '[N/D]';
-            reportUnitName.textContent = '[N/D]';
-            dashResultadoCustoAtual.textContent = 'R$ 0,00';
-            dashResultadoCustoSimulado.textContent = 'R$ 0,00';
-            dashResultadoEconomiaReais.textContent = 'R$ 0,00';
-            dashResultadoEconomiaPercentual.textContent = '(0.00%)';
-            totalAtual.textContent = 'R$ 0,00';
-            totalSimulado.textContent = 'R$ 0,00';
-            totalEconomia.textContent = 'R$ 0,00';
-            detalhesTbody.innerHTML = `<tr><td colspan="4" class="text-center">Execute uma simulação na aba <strong>"Simulação"</strong> para ver os resultados.</td></tr>`;
-            if (window.graficoEconomia instanceof Chart) {
-                window.graficoEconomia.destroy();
-            }
+    async function atualizarDashboard() {
+        if (!dadosDaSimulacao.parametros) {
+            detalhesTbody.innerHTML = `<tr><td colspan="4" class="text-center">Execute uma simulação primeiro na aba <strong>"Simulação"</strong>.</td></tr>`;
             return;
         }
-        const { lead, unidade, resultados } = dadosDaSimulacao;
-        renderizarCabecalho(lead, unidade);
-        renderizarResultados(resultados.totais);
-        renderizarTabelaDetalhada(resultados.mensais);
-        renderizarGrafico(resultados.mensais);
-    }
-    
-    function renderizarCabecalho(lead, unidade) {
-        reportLeadName.textContent = lead.razaoSocial || '[Não informado]';
-        reportUnitName.textContent = `${unidade.nome} (${unidade.id})`;
+
+        try {
+            const response = await fetch(`${API_URL}/api/dashboard_data`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosDaSimulacao.parametros)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.erro || "Erro ao buscar dados do dashboard");
+            }
+            const data = await response.json();
+            
+            const leadInfo = simulacaoLeadSelector.options[simulacaoLeadSelector.selectedIndex].text;
+            const unidadeInfo = simulacaoUnidadeSelector.options[simulacaoUnidadeSelector.selectedIndex].text;
+
+            renderizarCabecalhoDashboard(leadInfo, unidadeInfo);
+            renderizarResultadosDashboard(data);
+            renderizarTabelaDashboard(data.detalhes_mensais);
+            renderizarGraficoDashboard(data.detalhes_mensais);
+
+        } catch (error) {
+            console.error("Erro ao atualizar dashboard:", error);
+            detalhesTbody.innerHTML = `<tr><td colspan="4" class="text-center" style="color:red;">${error.message}</td></tr>`;
+        }
     }
 
-    function renderizarResultados(totais) {
-        dashResultadoCustoAtual.textContent = formatarMoeda(totais.atual);
-        dashResultadoCustoSimulado.textContent = formatarMoeda(totais.simulado);
-        dashResultadoEconomiaReais.textContent = formatarMoeda(totais.economiaReais);
-        dashResultadoEconomiaPercentual.textContent = `(${totais.economiaPercentual.toFixed(2)}%)`;
-        totalAtual.textContent = formatarMoeda(totais.atual);
-        totalSimulado.textContent = formatarMoeda(totais.simulado);
-        totalEconomia.textContent = formatarMoeda(totais.economiaReais);
+    function renderizarCabecalhoDashboard(leadInfo, unidadeInfo) {
+        reportLeadName.textContent = leadInfo;
+        reportUnitName.textContent = unidadeInfo;
     }
 
-    function renderizarTabelaDetalhada(dadosMensais) {
+    function renderizarResultadosDashboard(data) {
+        dashResultadoCustoAtual.textContent = formatarMoeda(data.custo_atual);
+        dashResultadoCustoSimulado.textContent = formatarMoeda(data.custo_simulado);
+        dashResultadoEconomiaReais.textContent = formatarMoeda(data.economia_reais);
+        dashResultadoEconomiaPercentual.textContent = `(${data.economia_percentual.toFixed(2)}%)`;
+    }
+
+    function renderizarTabelaDashboard(detalhes) {
         detalhesTbody.innerHTML = '';
-        dadosMensais.forEach(item => {
+        detalhes.forEach(item => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${item.mes}</td>
@@ -956,16 +956,25 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             detalhesTbody.appendChild(tr);
         });
+
+        const totalAtualValor = detalhes.reduce((acc, item) => acc + item.custoAtual, 0);
+        const totalSimuladoValor = detalhes.reduce((acc, item) => acc + item.custoSimulado, 0);
+        const totalEconomiaValor = detalhes.reduce((acc, item) => acc + item.economia, 0);
+        
+        totalAtual.textContent = formatarMoeda(totalAtualValor);
+        totalSimulado.textContent = formatarMoeda(totalSimuladoValor);
+        totalEconomia.textContent = formatarMoeda(totalEconomiaValor);
     }
 
-    function renderizarGrafico(dadosMensais) {
-        const labels = dadosMensais.map(d => d.mes).reverse();
-        const dadosAtuais = dadosMensais.map(d => d.custoAtual).reverse();
-        const dadosSimulados = dadosMensais.map(d => d.custoSimulado).reverse();
-        if (window.graficoEconomia instanceof Chart) {
-            window.graficoEconomia.destroy();
+    function renderizarGraficoDashboard(detalhes) {
+        if (dashboardChartInstance) {
+            dashboardChartInstance.destroy();
         }
-        window.graficoEconomia = new Chart(ctx, {
+        const labels = detalhes.map(d => d.mes);
+        const dadosAtuais = detalhes.map(d => d.custoAtual);
+        const dadosSimulados = detalhes.map(d => d.custoSimulado);
+
+        dashboardChartInstance = new Chart(ctxDashboard, {
             type: 'bar',
             data: {
                 labels: labels,
@@ -977,12 +986,12 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, ticks: { callback: value => 'R$ ' + (value / 1000) + 'k' } } },
-                plugins: { tooltip: { callbacks: { label: context => { let l = context.dataset.label || ''; if(l) l += ': '; if (context.parsed.y !== null) l += formatarMoeda(context.parsed.y); return l; } } } }
+                scales: { y: { beginAtZero: true, ticks: { callback: value => formatarMoeda(value) } } },
+                plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatarMoeda(context.parsed.y)}` } } }
             }
         });
     }
-
+    
     // --- VII. EVENT LISTENERS ---
     tabButtons.forEach(button => button.addEventListener('click', () => mudarAba(button.dataset.tab)));
     addLeadBtn.addEventListener('click', () => { limparFormularioLead(); switchScreen('cadastro', 'form'); });
@@ -995,7 +1004,18 @@ document.addEventListener('DOMContentLoaded', () => {
     addUnidadeBtn.addEventListener('click', () => { if (!estadoAtual.lead.id) { alert("Selecione um lead."); return; } limparFormularioUnidade(); unidadesSubtitle.innerText = `Nova Unidade para: ${estadoAtual.lead.razaoSocial}`; switchScreen('unidades', 'form'); });
     unidadesBackBtn.addEventListener('click', () => switchScreen('unidades', 'listing'));
     unidadeForm.addEventListener('submit', salvarUnidade);
-    gotoHistoricoFromUnidadesBtn.addEventListener('click', () => { if (!estadoAtual.unidade.id) { alert("Nenhuma unidade selecionada."); return; } mudarAba('historico'); switchScreen('historico', 'form'); historicoSubtitle.innerText = `Adicionando histórico para a UC: ${estadoAtual.unidade.id} (${estadoAtual.unidade.nome || 'Sem Nome'})`; });
+    
+    gotoHistoricoFromUnidadesBtn.addEventListener('click', () => { 
+        if (!estadoAtual.unidade.id) { 
+            alert("Nenhuma unidade selecionada."); 
+            return; 
+        } 
+        mudarAba('historico'); 
+        limparFormularioHistorico();
+        switchScreen('historico', 'form'); 
+        historicoSubtitle.innerText = `Adicionando histórico para a UC: ${estadoAtual.unidade.id} (${estadoAtual.unidade.nome || 'Sem Nome'})`; 
+    });
+
     unidadesTableBody.addEventListener('click', async (e) => {
         const tr = e.target.closest('tr');
         if (!tr || !estadoAtual.lead.id) return;
@@ -1016,7 +1036,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     historicoForm.addEventListener('submit', salvarHistorico);
     clearHistoricoButton.addEventListener('click', limparFormularioHistorico);
-    addHistoricoBtn.addEventListener('click', () => { const l=historicoLeadSelector.value, u=historicoUnidadeSelector.value; if(!l||!u){ alert("Selecione um lead e unidade."); return; } estadoAtual.lead.id=l; estadoAtual.unidade.id=u; switchScreen('historico', 'form'); });
+    
+    addHistoricoBtn.addEventListener('click', () => { 
+        const l=historicoLeadSelector.value, u=historicoUnidadeSelector.value; 
+        if(!l||!u){ 
+            alert("Selecione um lead e unidade."); 
+            return; 
+        } 
+        estadoAtual.lead.id=l; 
+        estadoAtual.unidade.id=u; 
+        limparFormularioHistorico();
+        switchScreen('historico', 'form'); 
+    });
+
     historicoBackBtn.addEventListener('click', () => switchScreen('historico', 'listing'));
     historicoLeadSelector.addEventListener('change', () => { const l=historicoLeadSelector.value; estadoAtual.lead.id=l; historicoTableBody.innerHTML = `<tr><td colspan="20" class="text-center">Selecione uma unidade.</td></tr>`; carregarUnidadesEmSeletor(l, historicoUnidadeSelector); });
     historicoUnidadeSelector.addEventListener('change', () => { const u=historicoUnidadeSelector.value; estadoAtual.unidade.id=u; if (u) { carregarHistorico(u, historicoTableBody); } else { historicoTableBody.innerHTML = `<tr><td colspan="20" class="text-center">Selecione uma unidade.</td></tr>`; } });
@@ -1036,7 +1068,154 @@ document.addEventListener('DOMContentLoaded', () => {
     unidadeForm.querySelector('[name="Cep"]').addEventListener('blur', (e) => { e.target.value = formatarCep(e.target.value); buscarCepUnidade(e.target.value); });
     ufSelect.addEventListener('change', () => carregarCidades(ufSelect.value, null, ufSelect, cidadeSelect));
     ufUnidadeSelect.addEventListener('change', () => carregarCidades(ufUnidadeSelect.value, null, ufUnidadeSelect, cidadeUnidadeSelect));
-    simulacaoForm.addEventListener('submit', executarSimulacao);
+    
+    // Listeners da Aba de Simulação
+    tipoSimulacaoRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const tipo = e.target.value;
+            if (tipo === 'lead') {
+                simulacaoLeadInputsContainer.classList.remove('hidden');
+                simulacaoDadosAutomaticos.classList.add('hidden');
+                simulacaoHistoricoContainer.classList.add('hidden');
+                simulacaoUnidadeSelector.disabled = true;
+            } else { // tipo === 'cliente'
+                simulacaoLeadInputsContainer.classList.add('hidden');
+                simulacaoUnidadeSelector.disabled = false;
+            }
+        });
+    });
+
+    periodoRapidoBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const meses = parseInt(btn.dataset.meses, 10);
+            const hoje = new Date();
+            const inicio = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
+            const fim = new Date(inicio.getFullYear(), inicio.getMonth() + meses - 1, inicio.getDate());
+            const fimCorrigido = new Date(fim.getFullYear(), fim.getMonth() + 1, 0);
+            simulacaoDataInicioInput.value = inicio.toLocaleDateString('pt-BR');
+            simulacaoDataFimInput.value = fimCorrigido.toLocaleDateString('pt-BR');
+        });
+    });
+
+    simulacaoLeadSelector.addEventListener('change', async () => {
+        const leadId = simulacaoLeadSelector.value;
+        simulacaoUnidadeSelector.innerHTML = '<option value="">Carregando unidades...</option>';
+        simulacaoUnidadeSelector.disabled = true;
+        simulacaoCalcularBtn.disabled = true;
+        simulacaoDadosAutomaticos.classList.add('hidden');
+        simulacaoHistoricoContainer.classList.add('hidden');
+    
+        if (leadId) {
+            await carregarUnidadesEmSeletor(leadId, simulacaoUnidadeSelector);
+        } else {
+            simulacaoUnidadeSelector.innerHTML = '<option value="">Selecione um lead primeiro</option>';
+        }
+    });
+    
+    simulacaoUnidadeSelector.addEventListener('change', async () => {
+        const select = simulacaoUnidadeSelector;
+        const ucId = select.value;
+
+        simulacaoHistoricoContainer.classList.add('hidden');
+        simulacaoDadosAutomaticos.classList.add('hidden');
+        simulacaoCalcularBtn.disabled = true;
+
+        if (ucId) {
+            try {
+                const optionSelecionado = select.options[select.selectedIndex];
+                const unidadeSelecionada = JSON.parse(optionSelecionado.dataset.unidade);
+
+                if (unidadeSelecionada) {
+                    dadosDaSimulacao.unidade = unidadeSelecionada;
+                    simulacaoInfoTarifa.textContent = unidadeSelecionada.Tarifa || ' N/D';
+                    simulacaoInfoDemanda.textContent = ` ${unidadeSelecionada.SubgrupoTarifario || ' N/D'}`;
+                    simulacaoInfoImpostos.textContent = `ICMS ${unidadeSelecionada.AliquotaICMS || 0}%`;
+                    simulacaoInfoMercado.textContent = unidadeSelecionada.MercadoAtual || ' N/D';
+                    simulacaoDadosAutomaticos.classList.remove('hidden');
+                    simulacaoCalcularBtn.disabled = false;
+
+                    const responseHistorico = await fetch(`${API_URL}/api/unidades/${ucId}/historico`);
+                    if (!responseHistorico.ok) throw new Error('Falha ao buscar histórico da unidade.');
+                    
+                    const historico = await responseHistorico.json();
+                    if (historico && historico.length > 0) {
+                        renderizarGraficoHistorico(historico);
+                        simulacaoHistoricoContainer.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao processar unidade ou histórico:", error);
+                alert("Não foi possível carregar os dados da unidade selecionada.");
+            }
+        }
+    });
+    
+    simulacaoCalcularBtn.addEventListener('click', async () => {
+        const leadId = simulacaoLeadSelector.value;
+        const ucId = simulacaoUnidadeSelector.value;
+        const tipo = document.querySelector('input[name="tipo_simulacao"]:checked').value;
+        const dataInicio = simulacaoDataInicioInput.value;
+        const dataFim = simulacaoDataFimInput.value;
+
+        if (!leadId || (tipo === 'cliente' && !ucId)) {
+            alert("Por favor, selecione um Lead/Cliente e uma Unidade Consumidora.");
+            return;
+        }
+        if (!dataInicio || !dataFim) {
+            alert("Por favor, defina o período de início e fim da simulação.");
+            return;
+        }
+        
+        simulacaoBtnText.textContent = 'Calculando...';
+        simulacaoBtnIcon.className = 'fas fa-spinner fa-spin';
+        simulacaoCalcularBtn.disabled = true;
+    
+        const parametrosSimulacao = {
+            lead_id: leadId,
+            uc_id: ucId,
+            tipo: tipo,
+            data_inicio: dataInicio,
+            data_fim: dataFim,
+            consumo_estimado: tipo === 'lead' ? document.getElementById('lead-consumo-estimado').value : null,
+            demanda_estimada: tipo === 'lead' ? document.getElementById('lead-demanda-estimada').value : null,
+        };
+    
+        try {
+            const response = await fetch(`${API_URL}/api/simulacao/calcular`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(parametrosSimulacao)
+            });
+    
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.erro || `Erro HTTP: ${response.status}`);
+            }
+    
+            const resultados = await response.json();
+            dadosDaSimulacao.parametros = parametrosSimulacao; // Salva para o dashboard
+            exibirResultadosSimulacao(resultados);
+    
+        } catch (error) {
+            console.error("Erro ao executar simulação:", error);
+            alert(`Falha ao calcular a simulação: ${error.message}`);
+        } finally {
+            simulacaoBtnText.textContent = 'Calcular Custo';
+            simulacaoBtnIcon.className = 'fas fa-calculator';
+            simulacaoCalcularBtn.disabled = false;
+        }
+    });
+    
+    simulacaoToggleDetalhesBtn.addEventListener('click', () => {
+        const isHidden = simulacaoTabelaDetalhadaContainer.classList.contains('hidden');
+        if (isHidden) {
+            simulacaoTabelaDetalhadaContainer.classList.remove('hidden');
+            simulacaoToggleDetalhesBtn.textContent = 'Ocultar Detalhes Mensais';
+        } else {
+            simulacaoTabelaDetalhadaContainer.classList.add('hidden');
+            simulacaoToggleDetalhesBtn.textContent = 'Ver Detalhes Mensais';
+        }
+    });
 
     // --- VIII. INICIALIZAÇÃO ---
     console.log('Iniciando aplicação...');
