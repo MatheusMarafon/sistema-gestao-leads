@@ -35,6 +35,9 @@
                     <button class="tab-button" data-tab="dashboard">
                         <i class="fas fa-chart-pie"></i> Dashboard
                     </button>
+                    <button class="tab-button" data-tab="parametros">
+                        <i class="fas fa-cogs"></i> Parâmetros
+                    </button>
                 </div>
             </header>
 
@@ -167,7 +170,7 @@
             </div>
 
             <div id="unidades" class="tab-content">
-                <div id="unidades-listing-screen" class="screen active">
+                 <div id="unidades-listing-screen" class="screen active">
                     <div class="listing-screen">
                         <div class="listing-header">
                             <h2 class="listing-title">
@@ -179,9 +182,6 @@
                                 </button>
                                 <button class="btn btn-secondary" id="refresh-unidades-btn">
                                     <i class="fas fa-sync-alt"></i> Atualizar
-                                </button>
-                                <button class="btn btn-info" id="goto-historico-from-unidades-btn" disabled>
-                                    <i class="fas fa-history"></i> Adicionar Histórico
                                 </button>
                             </div>
                         </div>
@@ -219,26 +219,13 @@
                                 <table id="unidade-historico-table">
                                     <thead>
                                         <tr>
-                                            <th>Numero Da Uc Lead</th>
-                                            <th>ID Mes</th>
+                                            <th>Mês (Ano)</th>
                                             <th>Demanda CP</th>
                                             <th>Demanda CFP</th>
                                             <th>Demanda CG</th>
-                                            <th>kW Proj Ponta</th>
-                                            <th>kW Proj Fora Ponta</th>
                                             <th>kWh Proj Ponta</th>
                                             <th>kWh Proj Fora Ponta</th>
-                                            <th>kWh Proj HRes</th>
-                                            <th>kWh Proj Ponta G</th>
-                                            <th>kWh Proj Fora Ponta G</th>
-                                            <th>kW Proj G</th>
-                                            <th>kWh Proj Diesel P</th>
-                                            <th>kWh Compensado P</th>
-                                            <th>kWh Compensado FP</th>
-                                            <th>kWh Compensado Hr</th>
-                                            <th>kW Geracao Projetada</th>
-                                            <th>Data Registro Historico</th>
-                                            <th>Ação</th>
+                                            <th>Data Registro</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -264,6 +251,7 @@
                         </div>
 
                         <form id="unidade-form" autocomplete="off">
+                             <input type="hidden" id="unidade-id-original" />
                             <div class="form-grid">
                                 <div class="input-group">
                                     <label>Nº da UC*</label>
@@ -372,17 +360,14 @@
                                 <i class="fas fa-history"></i> Histórico de Consumo
                             </h2>
                             <div class="action-buttons">
-                                <button class="btn btn-primary" id="add-historico-btn">
-                                    <i class="fas fa-plus"></i> Adicionar Histórico
-                                </button>
-                                <button class="btn btn-secondary" id="refresh-historico-btn">
-                                    <i class="fas fa-sync-alt"></i> Atualizar
+                                <button class="btn btn-primary" id="manage-historico-btn" disabled>
+                                    <i class="fas fa-edit"></i> Gerenciar Histórico do Ano
                                 </button>
                             </div>
                         </div>
 
                         <div class="filter-section">
-                            <div class="form-grid" style="grid-template-columns: 1fr 1fr; align-items: end;">
+                             <div class="form-grid" style="grid-template-columns: 1fr 1fr auto; align-items: end; gap: 15px;">
                                 <div class="unit-selector-container">
                                     <label for="historico-lead-selector">1. Selecione um Lead</label>
                                     <select id="historico-lead-selector" class="filter-input">
@@ -395,6 +380,10 @@
                                         <option value="">Aguardando seleção do lead...</option>
                                     </select>
                                 </div>
+                                <div class="unit-selector-container">
+                                    <label for="historico-ano-selector">3. Selecione o Ano</label>
+                                    <input type="number" id="historico-ano-selector" class="filter-input" placeholder="Ex: 2025" disabled>
+                                </div>
                             </div>
                         </div>
 
@@ -402,29 +391,18 @@
                             <table id="historico-table">
                                 <thead>
                                     <tr>
-                                        <th>Numero Da Uc Lead</th>
-                                        <th>ID Mes</th>
+                                        <th>Mês</th>
                                         <th>Demanda CP</th>
                                         <th>Demanda CFP</th>
                                         <th>Demanda CG</th>
-                                        <th>kW Proj Ponta</th>
-                                        <th>kW Proj Fora Ponta</th>
                                         <th>kWh Proj Ponta</th>
                                         <th>kWh Proj Fora Ponta</th>
-                                        <th>kWh Proj HRes</th>
-                                        <th>kWh Proj Ponta G</th>
-                                        <th>kWh Proj Fora Ponta G</th>
-                                        <th>kW Proj G</th>
-                                        <th>kWh Proj Diesel P</th>
-                                        <th>kWh Compensado P</th>
-                                        <th>kWh Compensado FP</th>
-                                        <th>kWh Compensado Hr</th>
-                                        <th>kW Geracao Projetada</th>
-                                        <th>Data Registro Historico</th>
-                                        <th>Ação</th>
+                                        <th>Data Registro</th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
+                                <tbody>
+                                    <tr><td colspan="7" style="text-align: center;">Selecione um Lead, Unidade e Ano para ver o histórico.</td></tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -434,7 +412,7 @@
                     <div class="form-screen">
                         <div class="form-header">
                             <h2 class="form-title" id="historico-form-title">
-                                <i class="fas fa-history"></i> Adicionar/Editar Histórico
+                                <i class="fas fa-pencil-alt"></i> Gerenciar Histórico de Consumo
                             </h2>
                             <button class="btn btn-back" id="historico-back-btn">
                                 <i class="fas fa-arrow-left"></i> Voltar
@@ -442,92 +420,42 @@
                         </div>
 
                         <div class="form-subtitle">
-                            <p id="historico-subtitle">Selecione uma unidade para gerir o seu histórico.</p>
+                            <p id="historico-subtitle">Preencha os dados de consumo para os 12 meses do ano selecionado.</p>
                         </div>
 
                         <form id="historico-form" autocomplete="off">
-                            <div class="form-grid">
-                                <div class="input-group">
-                                    <label>ID Mês* (YYYY-MM)</label>
-                                    <input type="text" name="IDMes" placeholder="Ex: 2025-09">
-                                </div>
-                                <div class="input-group">
-                                    <label>Demanda CP</label>
-                                    <input type="text" name="DemandaCP" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>Demanda CFP</label>
-                                    <input type="text" name="DemandaCFP" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>Demanda CG</label>
-                                    <input type="text" name="DemandaCG" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kW Proj Ponta</label>
-                                    <input type="text" name="kWProjPonta" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kW Proj Fora Ponta</label>
-                                    <input type="text" name="kWProjForaPonta" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Proj Ponta</label>
-                                    <input type="text" name="kWhProjPonta" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Proj Fora Ponta</label>
-                                    <input type="text" name="kWhProjForaPonta" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Proj HRes</label>
-                                    <input type="text" name="kWhProjHRes" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Proj Ponta G</label>
-                                    <input type="text" name="kWhProjPontaG" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Proj Fora Ponta G</label>
-                                    <input type="text" name="kWhProjForaPontaG" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kW Proj G</label>
-                                    <input type="text" name="kWProjG" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Proj Diesel P</label>
-                                    <input type="text" name="kWhProjDieselP" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Compensado P</label>
-                                    <input type="text" name="kWhCompensadoP" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Compensado FP</label>
-                                    <input type="text" name="kWhCompensadoFP" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kWh Compensado Hr</label>
-                                    <input type="text" name="kWhCompensadoHr" placeholder="0.00">
-                                </div>
-                                <div class="input-group">
-                                    <label>kW Geração Projetada</label>
-                                    <input type="text" name="kWGeracaoProjetada" placeholder="0.00">
-                                </div>
-                                <div class="input-group with-icon">
-                                    <label>Data de Registo</label>
-                                    <input type="text" name="DataRegistroHistorico" class="datepicker-input" readonly>
-                                    <i class="fa-solid fa-calendar-days"></i>
-                                </div>
+                            <input type="hidden" id="historico-form-ano" />
+                            <div class="table-container" style="max-height: 60vh;">
+                                <table id="historico-input-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Mês</th>
+                                            <th>Demanda CP</th>
+                                            <th>Demanda CFP</th>
+                                            <th>Demanda CG</th>
+                                            <th>kW Proj Ponta</th>
+                                            <th>kW Proj Fora Ponta</th>
+                                            <th>kWh Proj Ponta</th>
+                                            <th>kWh Proj Fora Ponta</th>
+                                            <th>kWh Proj HRes</th>
+                                            <th>kWh Proj Ponta G</th>
+                                            <th>kWh Proj Fora Ponta G</th>
+                                            <th>kW Proj G</th>
+                                            <th>kWh Proj Diesel P</th>
+                                            <th>kWh Compensado P</th>
+                                            <th>kWh Compensado FP</th>
+                                            <th>kWh Compensado Hr</th>
+                                            <th>kW Geracao Projetada</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        </tbody>
+                                </table>
                             </div>
 
                             <div class="form-actions">
-                                <button id="clear-historico-button" type="button" class="btn btn-clear">
-                                    <i class="fas fa-eraser"></i> Limpar
-                                </button>
                                 <button id="save-historico-button" type="submit" class="btn btn-save">
-                                    <i class="fas fa-save"></i> Salvar Histórico
+                                    <i class="fas fa-save"></i> Salvar Histórico Anual
                                 </button>
                             </div>
                         </form>
@@ -536,7 +464,7 @@
             </div>
 
             <div id="proposta" class="tab-content">
-                <div id="proposta-listing-screen" class="screen active">
+                 <div id="proposta-listing-screen" class="screen active">
                     <div class="listing-screen">
                         <div class="listing-header">
                             <h2 class="listing-title">
@@ -597,13 +525,13 @@
                                 <div class="form-grid">
                                     <div class="input-group">
                                         <label>Selecione o Lead</label>
-                                        <select id="proposta-lead-selector">
+                                        <select id="proposta-lead-selector" name="Cpf_CnpjLead">
                                             <option value="">Carregando leads...</option>
                                         </select>
                                     </div>
                                     <div class="input-group">
                                         <label>Selecione a Unidade Consumidora</label>
-                                        <select id="proposta-unidade-selector" disabled>
+                                        <select id="proposta-unidade-selector" name="NumeroDaUcLead" disabled>
                                             <option value="">Selecione um lead primeiro</option>
                                         </select>
                                     </div>
@@ -614,8 +542,8 @@
                                 <legend><i class="fas fa-file-alt"></i> Dados da Proposta</legend>
                                 <div class="form-grid">
                                     <div class="input-group">
-                                        <label>Nº Proposta</label>
-                                        <input type="number" name="NProposta">
+                                        <label>Nº Proposta (será gerado automaticamente)</label>
+                                        <input type="text" name="NProposta" readonly>
                                     </div>
                                     <div class="input-group">
                                         <label>Agente de Venda</label>
@@ -719,6 +647,7 @@
                         </div>
                         <div class="card-content">
                             <div class="simulacao-grid-col-2">
+                                
                                 <div class="simulacao-input-group" style="grid-column: 1 / -1;">
                                     <label style="text-align: center; margin-bottom: 5px; font-weight: 600;">Tipo de Simulação</label>
                                     <div class="radio-group">
@@ -730,6 +659,7 @@
                                         </label>
                                     </div>
                                 </div>
+
                                 <div class="simulacao-input-group">
                                     <label>Lead / Cliente</label>
                                     <select id="simulacao-lead-selector">
@@ -764,7 +694,6 @@
                                     </div>
                                 </div>
                             </fieldset>
-
 
                             <div id="simulacao-lead-inputs" class="hidden">
                                 <h4 class="dados-titulo"><i class="fas fa-keyboard"></i> Inserir Dados para Novo Lead</h4>
@@ -864,7 +793,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
@@ -880,17 +808,17 @@
             
                     <section class="resultados-grid">
                         <div class="card-resultado custo-atual">
-                            <h4>Custo Anual Projetado (Mercado Cativo)</h4>
+                            <h4>Custo Atual (Mercado Cativo)</h4>
                             <p id="resultado-custo-atual">R$ 0,00</p>
-                            <span>Baseado no histórico de 12 meses</span>
+                            <span id="resultado-custo-atual-desc"></span>
                         </div>
                         <div class="card-resultado custo-simulado">
-                            <h4>Custo Anual Simulado (Mercado Livre)</h4>
+                            <h4>Custo Simulado (Mercado Livre)</h4>
                             <p id="resultado-custo-simulado">R$ 0,00</p>
-                            <span>Com base nos parâmetros da proposta</span>
+                            <span>Baseado em desconto de 15%</span>
                         </div>
                         <div class="card-resultado economia">
-                            <h4>Sua Economia Anual</h4>
+                            <h4>Economia no Período</h4>
                             <p id="resultado-economia-reais">R$ 0,00</p>
                             <span id="resultado-economia-percentual">(0,00%)</span>
                         </div>
@@ -918,7 +846,7 @@
                                 <tbody id="detalhes-tbody"></tbody>
                                 <tfoot>
                                     <tr>
-                                        <th>Total Anual</th>
+                                        <th>Total no Período</th>
                                         <td id="total-atual">R$ 0,00</td>
                                         <td id="total-simulado">R$ 0,00</td>
                                         <td class="coluna-economia" id="total-economia">R$ 0,00</td>
@@ -927,83 +855,248 @@
                             </table>
                         </div>
                     </section>
-            
-                    <footer class="report-actions">
-                        <button class="btn btn-save">
-                            <i class="fas fa-save"></i> Salvar na Proposta
-                        </button>
-                        <button class="btn btn-secondary">
-                            <i class="fas fa-file-pdf"></i> Gerar PDF
-                        </button>
-                    </footer>
                 </main>
+            </div>
+
+            <div id="parametros" class="tab-content">
+                <div class="form-screen">
+                    <div class="sub-nav">
+                        <button class="sub-nav-button active" data-sub-tab="simulacao-precos">Simulação e Preços</button>
+                        <button class="sub-nav-button" data-sub-tab="ajustes">Ajustes</button>
+                        <button class="sub-nav-button" data-sub-tab="geracao">Geração</button>
+                    </div>
+
+                    <div id="sub-tab-simulacao-precos" class="sub-tab-content active">
+                        <div class="listing-header" style="margin-bottom: 20px; border-bottom: none;">
+                            <h2 class="listing-title" style="font-size: 1.8rem;">
+                                <i class="fas fa-cogs"></i> Parâmetros de Simulação
+                            </h2>
+                        </div>
+
+                        <fieldset>
+                            <legend><i class="fas fa-user-tag"></i> Parâmetros do Cliente (tbl_P_01_01_01_Clientes)</legend>
+                            <form id="form-param-clientes">
+                                <div class="form-grid">
+                                    <div class="input-group">
+                                        <label for="param-cliente-select">Cliente</label>
+                                        <select id="param-cliente-select" name="Cliente">
+                                            <option value="">Selecione um cliente/lead...</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group with-icon">
+                                        <label for="param-data-inicial">Data Inicial da Simulação</label>
+                                        <input type="text" id="param-data-inicial" name="DataInicialSimula" class="datepicker-input" readonly>
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                    <div class="input-group with-icon">
+                                        <label for="param-data-final">Data Final da Simulação</label>
+                                        <input type="text" id="param-data-final" name="DataFinalSimula" class="datepicker-input" readonly>
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="param-tipo-geracao">Tipo de Geração</label>
+                                        <select id="param-tipo-geracao" name="TipoGeracao">
+                                            <option value="Hidrica">Hídrica</option>
+                                            <option value="Solar">Solar</option>
+                                            <option value="Eolica">Eólica</option>
+                                            <option value="Termica">Térmica</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group" style="justify-content: center;">
+                                        <label for="param-incluir-grupob" style="display: flex; align-items: center; cursor: pointer;">
+                                            <input type="checkbox" id="param-incluir-grupob" name="IncluirGrupoB" style="width: auto; margin-right: 10px;">
+                                            Incluir Grupo B na Simulação?
+                                        </label>
+                                    </div>
+                                </div>
+                            </form>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend><i class="fas fa-sliders-h"></i> Parâmetros Gerais da Simulação (tbl_P_01_01_03_DadosSimulacao)</legend>
+                            <form id="form-param-gerais">
+                                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                                    <div class="input-group"><label for="param-pis">PIS (%)</label><input type="number" step="0.01" id="param-pis" name="Pis" placeholder="Ex: 1.65"></div>
+                                    <div class="input-group"><label for="param-cofins">COFINS (%)</label><input type="number" step="0.01" id="param-cofins" name="Cofins" placeholder="Ex: 7.60"></div>
+                                    <div class="input-group"><label for="param-custo-garantia">Custo Garantia (%)</label><input type="number" step="0.01" id="param-custo-garantia" name="PctCustoGarantia" placeholder="Ex: 5.0"></div>
+                                    <div class="input-group"><label for="param-meses-garantia">Meses de Garantia</label><input type="number" id="param-meses-garantia" name="MesesGarantia" placeholder="Ex: 12"></div>
+                                    <div class="input-group"><label for="param-perdas">Perdas (%)</label><input type="number" step="0.01" id="param-perdas" name="Perdas" placeholder="Ex: 8.0"></div>
+                                    <div class="input-group"><label for="param-fonte-base">Fonte Energia Base</label><select id="param-fonte-base" name="FonteEnergiaBase"><option value="I0">I0</option><option value="I1">I1</option></select></div>
+                                    <div class="input-group"><label for="param-preco-diesel">Preço Diesel (R$/L)</label><input type="number" step="0.01" id="param-preco-diesel" name="PrecoDiesel" placeholder="Ex: 6.50"></div>
+                                    <div class="input-group"><label for="param-rendimento-gerador">Rendimento Gerador</label><input type="number" step="0.01" id="param-rendimento-gerador" name="RendimentoGerador" placeholder="Ex: 0.95"></div>
+                                </div>
+                            </form>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend><i class="fas fa-dollar-sign"></i> Tabela de Preços por MWh (tbl_P_01_01_04_PrecoMWhAno)</legend>
+                            <div class="table-container" style="max-height: 250px;"><table id="table-precos-ano"><thead><tr><th>Ano</th><th>Fonte</th><th>Preço (R$/MWh)</th><th>Corrigir por</th><th>Ações</th></tr></thead><tbody></tbody></table></div>
+                        </fieldset>
+                        
+                        <fieldset>
+                            <legend><i class="fas fa-file-invoice-dollar"></i> Tabela de Custos Base (tbl_P_01_01_02_CustosBaseMes)</legend>
+                            <div class="table-container" style="max-height: 250px;"><table id="table-custos-mes"><thead><tr><th>Mês Ref.</th><th>Liq. MCPA-CL</th><th>Liq. MCPA-PE</th><th>Liq. Ener. Reserva</th><th>Liq. RCAP</th><th>Spread Venda</th><th>Modelagem</th><th>Ações</th></tr></thead><tbody></tbody></table></div>
+                        </fieldset>
+                    </div>
+
+                    <div id="sub-tab-ajustes" class="sub-tab-content">
+                        <fieldset>
+                            <legend><i class="fas fa-chart-line"></i> Ajuste de IPCA Anual</legend>
+                            <div class="action-buttons" style="justify-content: flex-end; margin-bottom: 15px;">
+                                <button id="add-ipca-btn" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Adicionar Ajuste IPCA</button>
+                            </div>
+                            <div class="table-container" style="max-height: 300px;">
+                                <table id="table-ajuste-ipca">
+                                    <thead><tr><th>Ano</th><th>Percentual IPCA (%)</th><th>Ações</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend><i class="fas fa-bolt"></i> Ajuste de Tarifas por Distribuidora</legend>
+                             <div class="input-group" style="margin-bottom: 20px; max-width: 400px;">
+                                <label for="ajuste-tarifa-distribuidora-select">Selecione a Distribuidora</label>
+                                <select id="ajuste-tarifa-distribuidora-select">
+                                    <option value="">Carregando...</option>
+                                </select>
+                            </div>
+                            <div class="table-container" style="max-height: 400px;">
+                                <table id="table-ajuste-tarifa">
+                                    <thead>
+                                        <tr>
+                                            <th>Ano</th>
+                                            <th>% TUSD kW P</th>
+                                            <th>% TUSD kW FP</th>
+                                            <th>% TUSD MWh P</th>
+                                            <th>% TUSD MWh FP</th>
+                                            <th>% TE MWh P</th>
+                                            <th>% TE MWh FP</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div id="sub-tab-geracao" class="sub-tab-content">
+                        <fieldset>
+                            <legend><i class="fas fa-bolt"></i> Dados de Geração Anual (tbl_P_03_01_01_DadosGeracao)</legend>
+                            <div class="table-container" style="max-height: 250px;">
+                                <table id="table-dados-geracao">
+                                    <thead>
+                                        <tr>
+                                            <th>Fonte</th>
+                                            <th>Local</th>
+                                            <th>Volume (MWh/Ano)</th>
+                                            <th>Preço (R$/MWh)</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend><i class="fas fa-chart-line"></i> Curva de Sazonalização (tbl_P_03_01_02_CurvaGeracao)</legend>
+                            <div class="table-container" style="max-height: 300px;">
+                                <table id="table-curva-geracao">
+                                    <thead>
+                                        <tr>
+                                            <th>Mês/Ano (ID)</th>
+                                            <th>Fonte</th>
+                                            <th>Local</th>
+                                            <th>% Sazonalização</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="save-all-params" class="btn btn-save"><i class="fas fa-save"></i> Salvar Todos os Parâmetros</button>
+                    </div>
+                </div>
             </div>
 
         </main>
     </div>
 
     <div id="vendedor-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-user-tie"></i> Vendedor e Contato</h2>
-                <button id="close-vendedor-modal" class="close-button">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="vendedor-contato-form">
-                    <fieldset>
-                        <legend>Vendedor Responsável</legend>
-                        <div class="form-grid">
-                            <div class="input-group">
-                                <label>Vendedor*</label>
-                                <input type="text" name="Vendedor">
-                            </div>
-                            <div class="input-group with-icon">
-                                <label>Data de Envio*</label>
-                                <input type="text" name="DataEnvio" class="datepicker-input" readonly placeholder="Clique para selecionar">
-                                <i class="fa-solid fa-calendar-days"></i>
-                            </div>
-                            <div class="input-group with-icon">
-                                <label>Validade do Lead*</label>
-                                <input type="text" name="DataValidade" class="datepicker-input" readonly placeholder="Clique para selecionar">
-                                <i class="fa-solid fa-calendar-days"></i>
-                            </div>
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Contato Principal</legend>
-                        <div class="form-grid">
-                            <div class="input-group">
-                                <label>Nome do Contato*</label>
-                                <input type="text" name="NomeContato">
-                            </div>
-                            <div class="input-group">
-                                <label>E-mail</label>
-                                <input type="email" name="Email">
-                            </div>
-                            <div class="input-group">
-                                <label>Telefone</label>
-                                <input type="tel" name="Telefone">
-                            </div>
-                        </div>
-                    </fieldset>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button id="save-vendedor-contato" type="submit" form="vendedor-contato-form" class="btn btn-save">
-                    <i class="fas fa-save"></i> Salvar Informações
-                </button>
-            </div>
-        </div>
-    </div>
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h2><i class="fas fa-user-tie"></i> Vendedor e Contato</h2>
+                  <button id="close-vendedor-modal" class="close-button">&times;</button>
+              </div>
+              <div class="modal-body">
+                  <form id="vendedor-contato-form">
+                      <fieldset>
+                          <legend>Vendedor Responsável</legend>
+                          <div class="form-grid">
+                              <div class="input-group"><label>Vendedor*</label><input type="text" name="Vendedor"></div>
+                              <div class="input-group with-icon"><label>Data de Envio*</label><input type="text" name="DataEnvio" class="datepicker-input" readonly placeholder="Clique para selecionar"><i class="fa-solid fa-calendar-days"></i></div>
+                              <div class="input-group with-icon"><label>Validade do Lead*</label><input type="text" name="DataValidade" class="datepicker-input" readonly placeholder="Clique para selecionar"><i class="fa-solid fa-calendar-days"></i></div>
+                          </div>
+                      </fieldset>
+                      <fieldset>
+                          <legend>Contato Principal</legend>
+                          <div class="form-grid">
+                              <div class="input-group"><label>Nome do Contato*</label><input type="text" name="NomeContato"></div>
+                              <div class="input-group"><label>E-mail</label><input type="email" name="Email"></div>
+                              <div class="input-group"><label>Telefone</label><input type="tel" name="Telefone"></div>
+                          </div>
+                      </fieldset>
+                  </form>
+              </div>
+              <div class="modal-footer">
+                  <button id="save-vendedor-contato" type="submit" form="vendedor-contato-form" class="btn btn-save">
+                      <i class="fas fa-save"></i> Salvar Informações
+                  </button>
+              </div>
+          </div>
+      </div>
 
-    <div id="calendar-modal" class="modal-overlay hidden">
-        <div class="modal-content" id="calendar-container">
-            <div id="calendar-wrapper">
-                </div>
-        </div>
-    </div>
+      <div id="calendar-modal" class="modal-overlay hidden">
+          <div class="modal-content" id="calendar-container">
+              <div id="calendar-wrapper"></div>
+          </div>
+      </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-    <script src="script.js"></script>
-</body>
-</html>
+      <div id="ipca-modal" class="modal-overlay hidden">
+          <div class="modal-content" style="max-width: 500px;">
+              <div class="modal-header">
+                  <h2 id="ipca-modal-title"><i class="fas fa-plus"></i> Adicionar Ajuste IPCA</h2>
+                  <button id="close-ipca-modal" class="close-button">&times;</button>
+              </div>
+              <div class="modal-body">
+                  <form id="ipca-form" autocomplete="off">
+                      <input type="hidden" id="ipca-ano-original" name="AnoOriginal">
+                      <div class="input-group">
+                          <label for="ipca-ano">Ano*</label>
+                          <input type="number" id="ipca-ano" name="Ano" placeholder="Ex: 2025" required>
+                      </div>
+                      <div class="input-group" style="margin-top: 15px;">
+                          <label for="ipca-percentual">Percentual IPCA (%)*</label>
+                          <input type="number" id="ipca-percentual" name="PctIPCA" step="0.01" placeholder="Ex: 5.75" required>
+                      </div>
+                  </form>
+              </div>
+              <div class="modal-footer">
+                  <button id="cancel-ipca-button" type="button" class="btn btn-secondary">Cancelar</button>
+                  <button id="save-ipca-button" type="submit" form="ipca-form" class="btn btn-save">
+                      <i class="fas fa-save"></i> Salvar
+                  </button>
+              </div>
+          </div>
+      </div>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+      <script src="script.js"></script>
+  </body>
+  </html>

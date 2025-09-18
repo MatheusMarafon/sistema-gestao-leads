@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cidadeUnidadeSelect = document.querySelector('.cidade-unidade-select');
     const addUnidadeBtn = document.getElementById('add-unidade-btn');
     const unidadesBackBtn = document.getElementById('unidades-back-btn');
-    const gotoHistoricoFromUnidadesBtn = document.getElementById('goto-historico-from-unidades-btn');
     
     // Módulo de Histórico
     const historicoTabButton = document.querySelector('.tab-button[data-tab="historico"]');
@@ -43,11 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const historicoSubtitle = document.getElementById('historico-subtitle');
     const historicoForm = document.getElementById('historico-form');
     const historicoFormTitle = document.getElementById('historico-form-title');
-    const clearHistoricoButton = document.getElementById('clear-historico-button');
-    const addHistoricoBtn = document.getElementById('add-historico-btn');
+    const historicoInputTableBody = document.querySelector('#historico-input-table tbody');
+    const manageHistoricoBtn = document.getElementById('manage-historico-btn');
     const historicoBackBtn = document.getElementById('historico-back-btn');
     const historicoLeadSelector = document.getElementById('historico-lead-selector');
     const historicoUnidadeSelector = document.getElementById('historico-unidade-selector');
+    const historicoAnoSelector = document.getElementById('historico-ano-selector');
     
     // Módulo de Propostas
     const addPropostaBtn = document.getElementById('add-proposta-btn');
@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const simulacaoHistoricoContainer = document.getElementById('simulacao-historico-container');
     const simulacaoHistoricoChartCanvas = document.getElementById('simulacao-historico-chart').getContext('2d');
     const simulacaoInfoMercado = document.getElementById('simulacao-info-mercado');
+    const saveAllParamsBtn = document.getElementById('save-all-params');
 
     // Módulo de Análise/Dashboard
     const dashboardTab = document.getElementById('dashboard');
@@ -110,20 +111,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalEconomia = dashboardTab.querySelector('#total-economia');
     const ctxDashboard = dashboardTab.querySelector('#simulador-grafico-economia').getContext('2d');
 
+    // Modal de Ajuste IPCA
+    const addIpcaBtn = document.getElementById('add-ipca-btn');
+    const ipcaModal = document.getElementById('ipca-modal');
+    const ipcaModalTitle = document.getElementById('ipca-modal-title');
+    const closeIpcaModalBtn = document.getElementById('close-ipca-modal');
+    const cancelIpcaBtn = document.getElementById('cancel-ipca-button');
+    const ipcaForm = document.getElementById('ipca-form');
+    const ipcaAnoOriginalInput = document.getElementById('ipca-ano-original');
+
     // --- II. ESTADO GLOBAL DA APLICAÇÃO ---
     let debounceTimer;
-    let modoEdicao = { lead: false, unidade: false, historico: false };
+    let modoEdicao = { lead: false, unidade: false };
     let historicoChartInstance = null;
     let dashboardChartInstance = null;
     
     let estadoAtual = {
         lead: { id: null, razaoSocial: null },
-        unidade: { id: null, nome: null, dados: null }
+        unidade: { id: null, nome: null, dados: null },
+        historico: { ano: new Date().getFullYear() }
     };
     
     let dadosDaSimulacao = {
         resultados: null,
-        parametros: null // Para guardar os parâmetros da última simulação
+        parametros: null 
     };
 
     // --- III. FUNÇÕES GLOBAIS ---
@@ -140,6 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (abaId === 'proposta') carregarLeadsEmSeletor(propostaLeadSelector);
         else if (abaId === 'simulacao') iniciarAbaSimulacao();
         else if (abaId === 'dashboard') atualizarDashboard();
+        else if (abaId === 'parametros') {
+            setupParametrosSubTabs();
+            carregarParametros();
+        }
     }
 
     function switchScreen(tabId, screenToShow) {
@@ -149,6 +164,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function abrirModal(modalElement) { modalElement.classList.remove('hidden'); }
+    function abrirModalEdicaoIPCA(button) {
+    const row = button.closest('tr');
+    const ano = row.cells[0].textContent;
+    const pct = row.cells[1].textContent;
+    ipcaForm.reset();
+    ipcaModalTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Ajuste IPCA';
+    ipcaForm.dataset.mode = 'edit';
+    document.getElementById('ipca-ano').value = ano;
+    document.getElementById('ipca-percentual').value = parseFloat(pct.replace('.', '').replace(',', '.'));
+    ipcaAnoOriginalInput.value = ano;
+    abrirModal(ipcaModal);
+}
     function fecharModal(modalElement) { modalElement.classList.add('hidden'); }
     
     const formatarMoeda = (valor) => {
@@ -157,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const formatNumber = (val) => {
-        if (val === null || val === undefined || val === '') return '--';
+        if (val === null || val === undefined || val === '') return '';
         try {
             const num = Number(String(val).replace(',', '.'));
             if (isNaN(num)) return val;
@@ -187,6 +214,41 @@ document.addEventListener('DOMContentLoaded', () => {
         return valor;
     }
 
+    // ADICIONE ESTA NOVA FUNÇÃO AO SEU SCRIPT.JS
+
+    async function carregarTabelaHistoricoCompleto(ucId) {
+        historicoTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Carregando histórico completo...</td></tr>`;
+        try {
+            // Usa a rota que busca TODOS os registros, ordenada pelos mais recentes
+            const response = await fetch(`${API_URL}/api/unidades/${ucId}/historico`);
+            const historicos = await response.json();
+            
+            historicoTableBody.innerHTML = '';
+            if (historicos.length === 0) {
+                historicoTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhum histórico encontrado para esta unidade.</td></tr>`;
+                return;
+            }
+
+            historicos.forEach(h => {
+                const tr = document.createElement('tr');
+                const idMesCompleto = h.IDMes || ''; // Mostra o Ano-Mês para clareza
+
+                tr.innerHTML = `
+                    <td>${idMesCompleto}</td>
+                    <td>${formatNumber(h.DemandaCP)}</td>
+                    <td>${formatNumber(h.DemandaCFP)}</td>
+                    <td>${formatNumber(h.DemandaCG)}</td>
+                    <td>${formatNumber(h.kWhProjPonta)}</td>
+                    <td>${formatNumber(h.kWhProjForaPonta)}</td>
+                    <td>${formatarData(h.DataRegistroHistorico)}</td>
+                `;
+                historicoTableBody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error('Falha ao carregar histórico completo:', error);
+            historicoTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar o histórico.</td></tr>`;
+        }
+    }
     // --- IV. LÓGICA DE LEADS, UNIDADES, HISTÓRICO, PROPOSTAS ---
     async function carregarLeads(filtro = '') {
         leadsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">A carregar...</td></tr>`;
@@ -361,11 +423,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
+
     async function carregarUnidadesDoLead(leadId) {
         unidadesTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Carregando unidades...</td></tr>`;
-        unidadeHistoricoTableBody.innerHTML = '';
-        gotoHistoricoFromUnidadesBtn.disabled = true;
+        unidadeHistoricoTableBody.innerHTML = ''; // Limpa o preview do histórico
         estadoAtual.unidade = { id: null, nome: null, dados: null };
+
         if (!leadId) {
             unidadesTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Selecione um lead acima.</td></tr>`;
             return;
@@ -374,10 +438,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`${API_URL}/api/leads/${encodeURIComponent(leadId)}/unidades`);
             const unidades = await response.json();
             unidadesTableBody.innerHTML = '';
+
             if (unidades.length === 0) {
                 unidadesTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Nenhuma unidade cadastrada para este lead.</td></tr>`;
                 return;
             }
+
             unidades.forEach(unidade => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
@@ -390,10 +456,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${unidade.Cidade || ''}</td>
                     <td>${unidade.Uf || ''}</td>
                     <td>${unidade.MercadoAtual || ''}</td>
-                    <td></td>
+                    <td class="actions-cell"></td>
                 `;
+                
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+                editBtn.className = 'btn btn-edit btn-action';
+                editBtn.title = 'Editar Unidade';
+                editBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    carregarUnidadeParaEdicao(unidade.NumeroDaUcLead, leadId);
+                };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.className = 'btn btn-delete btn-action';
+                deleteBtn.title = 'Excluir Unidade';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Tem certeza que deseja excluir a unidade ${unidade.NumeroDaUcLead}? Esta ação também removerá todo o seu histórico.`)) {
+                        deletarUnidade(unidade.NumeroDaUcLead, leadId);
+                    }
+                };
+                
+                tr.querySelector('.actions-cell').append(editBtn, deleteBtn);
+
+                tr.addEventListener('click', (e) => {
+                    if (e.target.closest('button')) return;
+                    const linhaAntiga = unidadesTableBody.querySelector('.selected');
+                    if (linhaAntiga) linhaAntiga.classList.remove('selected');
+                    tr.classList.add('selected');
+                    selecionarUnidade(unidade);
+                });
+
                 unidadesTableBody.appendChild(tr);
             });
+
+            // --->>> NOVA LÓGICA ADICIONADA AQUI <<<---
+            // Após a tabela ser criada, encontra a primeira linha e a seleciona automaticamente.
+            const primeiraLinha = unidadesTableBody.querySelector('tr');
+            if (primeiraLinha) {
+                primeiraLinha.click(); // Simula um clique para carregar o histórico
+            }
+
         } catch (error) {
             unidadesTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: red;">Erro ao carregar unidades.</td></tr>`;
             console.error('Erro:', error);
@@ -404,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         unidadeForm.reset();
         modoEdicao.unidade = false;
         unidadeForm.querySelector('[name="NumeroDaUcLead"]').disabled = false;
-        unidadesFormTitle.innerText = "🔌 Nova Unidade Consumidora";
+        unidadesFormTitle.innerHTML = '<i class="fas fa-plug"></i> Nova Unidade Consumidora';
         clearUnidadeButton.innerText = "Limpar";
         estadoAtual.unidade = { id: null, nome: null, dados: null };
     }
@@ -417,19 +522,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const formData = new FormData(unidadeForm);
         const unidadeData = Object.fromEntries(formData.entries());
-        if (modoEdicao.unidade) {
-            unidadeData.NumeroDaUcLead = estadoAtual.unidade.id;
-        }
+
+        const ucIdOriginal = document.getElementById('unidade-id-original').value;
+
         if (!unidadeData.NumeroDaUcLead) {
             alert("O Nº da UC é obrigatório!");
             return;
         }
+
         const leadIdEncoded = encodeURIComponent(estadoAtual.lead.id);
-        const url = modoEdicao.unidade ? `${API_URL}/api/unidades/${unidadeData.NumeroDaUcLead}` : `${API_URL}/api/leads/${leadIdEncoded}/unidades`;
+        const url = modoEdicao.unidade ? `${API_URL}/api/unidades/${encodeURIComponent(ucIdOriginal)}` : `${API_URL}/api/leads/${leadIdEncoded}/unidades`;
         const method = modoEdicao.unidade ? 'PUT' : 'POST';
+        
         if (modoEdicao.unidade) {
             unidadeData.Cpf_CnpjLead = estadoAtual.lead.id;
         }
+
         try {
             const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(unidadeData) });
             const result = await response.json();
@@ -441,15 +549,103 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`Erro ao salvar unidade: ${error.message}`);
         }
     }
+
+    async function carregarUnidadeParaEdicao(ucId, leadId) {
+        limparFormularioUnidade();
+        unidadesSubtitle.innerText = `Editando Unidade para: ${estadoAtual.lead.razaoSocial || leadId}`;
+        
+        try {
+            const response = await fetch(`${API_URL}/api/unidade/${encodeURIComponent(ucId)}`);
+            if (!response.ok) throw new Error("Unidade não encontrada ou erro no servidor.");
+            const unidade = await response.json();
+            
+            for(const key in unidade) {
+                const input = unidadeForm.querySelector(`[name="${key}"]`);
+                if(input) {
+                     if (key === 'Uf') {
+                        input.value = unidade[key];
+                        await carregarCidades(unidade[key], unidade.Cidade, ufUnidadeSelect, cidadeUnidadeSelect);
+                    } else {
+                        input.value = unidade[key] || '';
+                    }
+                }
+            }
+            
+            modoEdicao.unidade = true;
+            document.getElementById('unidade-id-original').value = ucId; 
+            unidadesFormTitle.innerHTML = '<i class="fas fa-edit"></i> Editando Unidade Consumidora';
+            switchScreen('unidades', 'form');
+            
+        } catch (error) {
+            console.error("Erro ao carregar unidade para edição:", error);
+            alert(`Não foi possível carregar os dados da unidade: ${error.message}`);
+        }
+    }
+
+    async function deletarUnidade(ucId, leadId) {
+        try {
+            const response = await fetch(`${API_URL}/api/unidades/${encodeURIComponent(ucId)}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Cpf_CnpjLead: leadId }) 
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+
+            alert(result.sucesso);
+            carregarUnidadesDoLead(leadId); 
+        } catch(error) {
+            console.error("Erro ao excluir unidade:", error);
+            alert(`Falha ao excluir unidade: ${error.message}`);
+        }
+    }
     
     function selecionarUnidade(unidade) {
         estadoAtual.unidade.id = unidade.NumeroDaUcLead;
         estadoAtual.unidade.nome = unidade.NomeDaUnidade || 'Unidade Sem Nome';
         estadoAtual.unidade.dados = unidade;
-        gotoHistoricoFromUnidadesBtn.disabled = false;
-        carregarHistorico(unidade.NumeroDaUcLead, unidadeHistoricoTableBody);
+        // A linha abaixo foi alterada para chamar a nova função de preview
+        carregarPreviewHistorico(unidade.NumeroDaUcLead); 
     }
-    
+    async function carregarPreviewHistorico(ucId) {
+        const tableBody = document.querySelector('#unidade-historico-table tbody');
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">A carregar histórico...</td></tr>`;
+        try {
+            // Esta rota busca TODOS os históricos da unidade, independente do ano
+            const response = await fetch(`${API_URL}/api/unidades/${ucId}/historico`);
+            const historicos = await response.json();
+            
+            tableBody.innerHTML = '';
+            if (historicos.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhum histórico encontrado para esta unidade.</td></tr>`;
+                return;
+            }
+
+            // Pega apenas os 12 registros mais recentes para a pré-visualização
+            const previewList = historicos.slice(0, 12);
+
+            previewList.forEach(h => {
+                const tr = document.createElement('tr');
+                
+                // Aqui usamos o IDMes completo (Ano-Mês) para o preview ficar mais claro
+                const idMesCompleto = h.IDMes || '';
+
+                tr.innerHTML = `
+                    <td>${idMesCompleto}</td>
+                    <td>${formatNumber(h.DemandaCP)}</td>
+                    <td>${formatNumber(h.DemandaCFP)}</td>
+                    <td>${formatNumber(h.DemandaCG)}</td>
+                    <td>${formatNumber(h.kWhProjPonta)}</td>
+                    <td>${formatNumber(h.kWhProjForaPonta)}</td>
+                    <td>${formatarData(h.DataRegistroHistorico)}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error('Falha ao carregar preview do histórico:', error);
+            tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar o histórico.</td></tr>`;
+        }
+    }
     function verUnidadesDoLead() { 
         if(estadoAtual.lead.id) {
             mudarAba('unidades'); 
@@ -460,115 +656,113 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function carregarHistorico(ucId, tableBodyElement) {
-        tableBodyElement.innerHTML = `<tr><td colspan="20" style="text-align:center;">A carregar...</td></tr>`;
+    async function carregarHistorico(ucId, ano, tableBodyElement) {
+        tableBodyElement.innerHTML = `<tr><td colspan="7" style="text-align:center;">A carregar...</td></tr>`;
         try {
-            const response = await fetch(`${API_URL}/api/unidades/${ucId}/historico`);
+            const response = await fetch(`${API_URL}/api/unidades/${ucId}/historico/${ano}`);
             const historicos = await response.json();
             tableBodyElement.innerHTML = '';
             if (historicos.length === 0) {
-                tableBodyElement.innerHTML = `<tr><td colspan="20" style="text-align:center;">Nenhum histórico encontrado.</td></tr>`;
+                tableBodyElement.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhum histórico encontrado para ${ano}.</td></tr>`;
                 return;
             }
             historicos.forEach(h => {
                 const tr = document.createElement('tr');
-                tr.dataset.historico = JSON.stringify(h);
                 tr.innerHTML = `
-                    <td>${h.NumeroDaUcLead || ''}</td>
                     <td>${h.IDMes || ''}</td>
                     <td>${formatNumber(h.DemandaCP)}</td>
                     <td>${formatNumber(h.DemandaCFP)}</td>
                     <td>${formatNumber(h.DemandaCG)}</td>
-                    <td>${formatNumber(h.kWProjPonta)}</td>
-                    <td>${formatNumber(h.kWProjForaPonta)}</td>
                     <td>${formatNumber(h.kWhProjPonta)}</td>
                     <td>${formatNumber(h.kWhProjForaPonta)}</td>
-                    <td>${formatNumber(h.kWhProjHRes)}</td>
-                    <td>${formatNumber(h.kWhProjPontaG)}</td>
-                    <td>${formatNumber(h.kWhProjForaPontaG)}</td>
-                    <td>${formatNumber(h.kWProjG)}</td>
-                    <td>${formatNumber(h.kWhProjDieselP)}</td>
-                    <td>${formatNumber(h.kWhCompensadoP)}</td>
-                    <td>${formatNumber(h.kWhCompensadoFP)}</td>
-                    <td>${formatNumber(h.kWhCompensadoHr)}</td>
-                    <td>${formatNumber(h.kWGeracaoProjetada)}</td>
                     <td>${formatarData(h.DataRegistroHistorico)}</td>
-                    <td></td>
                 `;
-                const actionCell = tr.querySelector('td:last-child');
-                const editBtn = document.createElement('button');
-                editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-                editBtn.className = 'btn btn-edit btn-action';
-                editBtn.title = 'Editar Histórico';
-                editBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    mudarAba('historico');
-                    switchScreen('historico', 'form');
-                    carregarHistoricoParaEdicao(h);
-                };
-                actionCell.appendChild(editBtn);
                 tableBodyElement.appendChild(tr);
             });
         } catch (error) {
             console.error('Falha ao carregar histórico:', error);
-            tableBodyElement.innerHTML = `<tr><td colspan="20" style="text-align:center; color: red;">${error.message}</td></tr>`;
+            tableBodyElement.innerHTML = `<tr><td colspan="7" style="text-align:center; color: red;">${error.message}</td></tr>`;
         }
     }
+    
+    async function popularFormularioHistoricoAnual(ucId, ano) {
+        historicoInputTableBody.innerHTML = '<tr><td colspan="17">Carregando...</td></tr>';
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const campos = [
+            "DemandaCP", "DemandaCFP", "DemandaCG", "kWProjPonta", "kWProjForaPonta", 
+            "kWhProjPonta", "kWhProjForaPonta", "kWhProjHRes", "kWhProjPontaG", 
+            "kWhProjForaPontaG", "kWProjG", "kWhProjDieselP", "kWhCompensadoP", 
+            "kWhCompensadoFP", "kWhCompensadoHr", "kWGeracaoProjetada"
+        ];
 
-    function limparFormularioHistorico() {
-        historicoForm.reset();
-        modoEdicao.historico = false;
-        historicoForm.querySelector('[name="IDMes"]').disabled = false;
-        historicoFormTitle.innerText = "📜 Adicionar Registo de Histórico";
-    }
+        try {
+            const response = await fetch(`${API_URL}/api/unidades/${ucId}/historico/${ano}`);
+            const historicosExistentes = await response.json();
+            const historicoMap = new Map(historicosExistentes.map(h => [new Date(h.IDMes).getUTCMonth(), h]));
+            
+            historicoInputTableBody.innerHTML = ''; // Limpa a tabela antes de preencher
 
-    function carregarHistoricoParaEdicao(historicoData) {
-        const numericFields = ['DemandaCP', 'DemandaCFP', 'DemandaCG', 'kWProjPonta', 'kWProjForaPonta', 'kWhProjPonta', 'kWhProjForaPonta', 'kWhProjHRes', 'kWhProjPontaG', 'kWhProjForaPontaG', 'kWProjG', 'kWhProjDieselP', 'kWhCompensadoP', 'kWhCompensadoFP', 'kWhCompensadoHr', 'kWGeracaoProjetada'];
-        for (const key in historicoData) {
-            const input = historicoForm.querySelector(`[name="${key}"]`);
-            if (!input) continue;
-            let value = historicoData[key];
-            if (value === null || value === undefined) {
-                input.value = '';
-                continue;
+            for (let i = 0; i < 12; i++) {
+                const mesData = historicoMap.get(i) || {};
+                const tr = document.createElement('tr');
+                let rowHTML = `<td>${meses[i]}</td>`;
+                campos.forEach(campo => {
+                    const valor = mesData[campo] != null ? formatNumber(mesData[campo]).replace(/\./g, '').replace(',', '.') : '';
+                    rowHTML += `<td><input type="text" name="historico[${i}][${campo}]" value="${valor}" placeholder="0,00" class="numeric-input"></td>`;
+                });
+                tr.innerHTML = rowHTML;
+                historicoInputTableBody.appendChild(tr);
             }
-            if (numericFields.includes(key)) {
-                input.value = formatNumber(value).replace(/\./g, '').replace(',', '.');
-            } else {
-                input.value = String(value);
-            }
+        } catch (error) {
+            console.error("Erro ao buscar histórico para edição:", error);
+            historicoInputTableBody.innerHTML = `<tr><td colspan="${campos.length + 1}" style="text-align:center; color: red;">Falha ao carregar dados.</td></tr>`;
         }
-        modoEdicao.historico = true;
-        historicoForm.querySelector('[name="IDMes"]').disabled = true;
-        historicoFormTitle.innerText = "✏️ Editando Histórico";
     }
-
+    
     async function salvarHistorico(event) {
         event.preventDefault();
-        if (!estadoAtual.unidade.id) {
-            alert("Nenhuma unidade selecionada para adicionar histórico.");
+        const ano = document.getElementById('historico-form-ano').value;
+        const ucId = estadoAtual.unidade.id;
+        if (!ucId || !ano) {
+            alert("Unidade ou Ano não definidos. Impossível salvar.");
             return;
         }
-        const formData = new FormData(historicoForm);
-        const data = Object.fromEntries(formData.entries());
-        if (modoEdicao.historico) {
-            data.IDMes = historicoForm.querySelector('[name="IDMes"]').value;
-        }
-        if (!data.IDMes || !/^\d{4}-\d{2}$/.test(data.IDMes)) {
-            alert("O campo ID Mês é obrigatório e deve estar no formato YYYY-MM.");
-            return;
-        }
-        const url = modoEdicao.historico ? `${API_URL}/api/historico/${estadoAtual.unidade.id}/${data.IDMes.replace('-', '')}` : `${API_URL}/api/unidades/${estadoAtual.unidade.id}/historico`;
-        const method = modoEdicao.historico ? 'PUT' : 'POST';
+
+        const dadosHistorico = [];
+        const rows = historicoInputTableBody.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            const mes = index + 1;
+            const mesData = {
+                IDMes: `${ano}-${String(mes).padStart(2, '0')}`
+            };
+            let hasData = false;
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                const nameMatch = input.name.match(/\[(.*?)\]/g);
+                if(nameMatch && nameMatch.length > 1) {
+                    const name = nameMatch[1].replace(/\[|\]/g, '');
+                    mesData[name] = input.value || null;
+                    if (input.value) hasData = true;
+                }
+            });
+
+            if (hasData) {
+                dadosHistorico.push(mesData);
+            }
+        });
+
         try {
-            const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            const response = await fetch(`${API_URL}/api/unidades/${ucId}/historico/batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ano: ano, dados: dadosHistorico })
+            });
             const result = await response.json();
             if (!response.ok) throw new Error(result.erro);
+            
             alert(result.sucesso);
-            limparFormularioHistorico();
-            mudarAba('unidades');
-            if(unidadeSelector) unidadeSelector.value = estadoAtual.lead.id;
-            await carregarUnidadesDoLead(estadoAtual.lead.id, estadoAtual.unidade.id);
+            switchScreen('historico', 'listing');
+            carregarHistorico(ucId, ano, historicoTableBody); 
         } catch (error) {
             alert(`Erro ao salvar histórico: ${error.message}`);
         }
@@ -650,7 +844,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const option = document.createElement('option');
                 option.value = unidade.NumeroDaUcLead;
                 option.textContent = `${unidade.NumeroDaUcLead} - ${unidade.NomeDaUnidade || 'Sem Nome'}`;
-                option.dataset.unidade = JSON.stringify(unidade);
                 seletorDeUnidade.appendChild(option);
             });
             seletorDeUnidade.disabled = false;
@@ -789,8 +982,8 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         const formData = new FormData(propostaForm);
         const propostaData = Object.fromEntries(formData.entries());
-        if (!propostaData.NProposta || !propostaData.AgenteDeVenda || !propostaData.StatusNegociacao) {
-            alert('Os campos Nº Proposta, Agente de Venda e Status são obrigatórios!');
+        if (!propostaData.Cpf_CnpjLead || !propostaData.NumeroDaUcLead || !propostaData.AgenteDeVenda) {
+            alert('Lead, Unidade e Agente de Venda são obrigatórios!');
             return;
         }
         try {
@@ -832,16 +1025,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historicoChartInstance) {
             historicoChartInstance.destroy();
         }
-
         const dadosOrdenados = historicoData.sort((a, b) => String(a.IDMes).localeCompare(String(b.IDMes))).slice(-13);
-
         const labels = dadosOrdenados.map(h => h.IDMes);
         const consumoData = dadosOrdenados.map(h => {
             const consumoP = parseFloat(h.kWhProjPonta) || 0;
             const consumoFP = parseFloat(h.kWhProjForaPonta) || 0;
             return consumoP + consumoFP;
         });
-
         historicoChartInstance = new Chart(simulacaoHistoricoChartCanvas, {
             type: 'line',
             data: {
@@ -858,12 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: 'Consumo (kWh)' }
-                    }
-                }
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Consumo (kWh)' } } }
             }
         });
     }
@@ -871,7 +1056,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function exibirResultadosSimulacao(resultados) {
         const leadSelecionado = simulacaoLeadSelector.options[simulacaoLeadSelector.selectedIndex].text;
         const unidadeSelecionada = simulacaoUnidadeSelector.options[simulacaoUnidadeSelector.selectedIndex].text;
-        
         const duracaoLabel = Math.round(resultados.totais.duracao_meses);
 
         simulacaoLabelCustoTotal.textContent = `Custo Total em ${duracaoLabel} Meses`;
@@ -991,7 +1175,301 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    async function carregarParametros() {
+    const saveButton = document.getElementById('save-all-params');
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
+
+    try {
+        const response = await fetch(`${API_URL}/api/parametros`);
+        if (!response.ok) {
+            throw new Error('Não foi possível carregar os parâmetros do servidor.');
+        }
+        const params = await response.json();
+
+        // Popular cada seção com os dados recebidos
+        popularSeletorClientesParametros(params.clientes);
+        popularFormGerais(params.simulacao_geral);
+        popularTabelaPrecos(params.precos_ano);
+        popularTabelaCustos(params.custos_mes);
+
+    } catch (error) {
+        console.error("Erro ao carregar parâmetros:", error);
+        alert(`Erro ao carregar parâmetros: ${error.message}`);
+    } finally {
+        saveButton.disabled = false;
+        saveButton.innerHTML = '<i class="fas fa-save"></i> Salvar Todos os Parâmetros';
+    }
+}
+
+// --- LÓGICA DA ABA DE PARÂMETROS ---
+
+function setupParametrosSubTabs() {
+    const subNavButtons = document.querySelectorAll('.sub-nav-button');
+    const subTabContents = document.querySelectorAll('.sub-tab-content');
+
+    subNavButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove 'active' de todos
+            subNavButtons.forEach(btn => btn.classList.remove('active'));
+            subTabContents.forEach(content => content.classList.remove('active'));
+
+            // Adiciona 'active' ao clicado
+            button.classList.add('active');
+            const subTabId = `sub-tab-${button.dataset.subTab}`;
+            document.getElementById(subTabId).classList.add('active');
+            
+            // Carrega os dados da sub-aba de Ajustes se for a primeira vez que é clicada
+            if (button.dataset.subTab === 'ajustes' && !button.dataset.loaded) {
+                carregarDadosAjustes();
+                button.dataset.loaded = 'true'; // Marca como carregado
+            }
+            if (button.dataset.subTab === 'geracao' && !button.dataset.loaded) {
+                carregarDadosGeracao();
+                button.dataset.loaded = 'true';
+            }
+        });
+    });
+}
+
+async function carregarDadosAjustes() {
+    await carregarAjusteIPCA();
+    await carregarDistribuidoras();
+}
+
+async function carregarAjusteIPCA() {
+    const tbody = document.querySelector('#table-ajuste-ipca tbody');
+    tbody.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
+    try {
+        const response = await fetch(`${API_URL}/api/parametros/ajuste-ipca`);
+        const data = await response.json();
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.Ano}</td>
+                <td>${formatNumber(item.PctIPCA)}</td>
+                <td><button class="btn btn-edit btn-sm">Editar</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:red;">Erro ao carregar dados.</td></tr>';
+        console.error("Erro ao carregar ajuste IPCA:", error);
+    }
+}
+
+async function carregarDistribuidoras() {
+    const select = document.getElementById('ajuste-tarifa-distribuidora-select');
+    select.innerHTML = '<option value="">Carregando...</option>';
+    try {
+        const response = await fetch(`${API_URL}/api/parametros/distribuidoras`);
+        const data = await response.json();
+        select.innerHTML = '<option value="">Selecione uma distribuidora...</option>';
+        data.forEach(cnpj => {
+            const option = document.createElement('option');
+            option.value = cnpj;
+            option.textContent = cnpj; // Pode-se formatar o CNPJ aqui se desejar
+            select.appendChild(option);
+        });
+    } catch (error) {
+        select.innerHTML = '<option value="">Erro ao carregar.</option>';
+        console.error("Erro ao carregar distribuidoras:", error);
+    }
+}
+
+async function carregarAjusteTarifa(cnpj) {
+    const tbody = document.querySelector('#table-ajuste-tarifa tbody');
+    if (!cnpj) {
+        tbody.innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = '<tr><td colspan="8">Carregando tarifas...</td></tr>';
+    try {
+        const response = await fetch(`${API_URL}/api/parametros/ajuste-tarifa/${encodeURIComponent(cnpj)}`);
+        const data = await response.json();
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.Ano}</td>
+                <td>${formatNumber(item.PctTusdkWP)}</td>
+                <td>${formatNumber(item.PctTusdkWFP)}</td>
+                <td>${formatNumber(item.PctTusdMWhP)}</td>
+                <td>${formatNumber(item.PctTusdMWhFP)}</td>
+                <td>${formatNumber(item.PctTEMWhP)}</td>
+                <td>${formatNumber(item.PctTEMWhFP)}</td>
+                <td><button class="btn btn-edit btn-sm">Editar</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="8" style="color:red;">Erro ao carregar tarifas.</td></tr>';
+        console.error("Erro ao carregar ajuste de tarifa:", error);
+    }
+}
+async function carregarDadosGeracao() {
+    const tbodyDados = document.querySelector('#table-dados-geracao tbody');
+    const tbodyCurva = document.querySelector('#table-curva-geracao tbody');
+    tbodyDados.innerHTML = '<tr><td colspan="5">Carregando...</td></tr>';
+    tbodyCurva.innerHTML = '<tr><td colspan="5">Carregando...</td></tr>';
+
+    try {
+        const response = await fetch(`${API_URL}/api/parametros/geracao`);
+        if (!response.ok) throw new Error('Falha ao buscar dados de geração');
+        const data = await response.json();
+
+        popularTabelaDadosGeracao(data.dados_geracao);
+        popularTabelaCurvaGeracao(data.curva_geracao);
+
+    } catch (error) {
+        tbodyDados.innerHTML = '<tr><td colspan="5" style="color:red;">Erro ao carregar dados.</td></tr>';
+        tbodyCurva.innerHTML = '<tr><td colspan="5" style="color:red;">Erro ao carregar dados.</td></tr>';
+        console.error("Erro ao carregar dados de geração:", error);
+    }
+}
+
+function popularTabelaDadosGeracao(dados) {
+    const tbody = document.querySelector('#table-dados-geracao tbody');
+    tbody.innerHTML = '';
+    if (!dados || dados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhum dado encontrado.</td></tr>';
+        return;
+    }
+    dados.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.Fonte || ''}</td>
+            <td>${item.Local || ''}</td>
+            <td>${item.VolumeMWhAno || ''}</td>
+            <td>${formatNumber(item.PrecoRS_MWh)}</td>
+            <td><button class="btn btn-edit btn-sm">Editar</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function popularTabelaCurvaGeracao(dados) {
+    const tbody = document.querySelector('#table-curva-geracao tbody');
+    tbody.innerHTML = '';
+     if (!dados || dados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhum dado encontrado.</td></tr>';
+        return;
+    }
+    dados.forEach(item => {
+        const tr = document.createElement('tr');
+        const idMesFormatado = String(item.IdMes).replace(/(\d{4})(\d{2})/, '$1-$2');
+        tr.innerHTML = `
+            <td>${idMesFormatado}</td>
+            <td>${item.Fonte || ''}</td>
+            <td>${item.Local || ''}</td>
+            <td>${formatNumber(item.PctSazonalizacaoMes)}</td>
+            <td><button class="btn btn-edit btn-sm">Editar</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+function popularSeletorClientesParametros(clientes) {
+    const select = document.getElementById('param-cliente-select');
+    if (!select || !clientes) return;
+
+    // Guarda os dados dos clientes no próprio elemento para fácil acesso
+    select.dataset.clientes = JSON.stringify(clientes);
+
+    const valorAtual = select.value;
+    select.innerHTML = '<option value="">Selecione um cliente/lead...</option>';
+    clientes.forEach(cliente => {
+        const option = document.createElement('option');
+        option.value = cliente.Cliente;
+        option.textContent = cliente.Cliente;
+        select.appendChild(option);
+    });
+
+    if (valorAtual && select.querySelector(`option[value="${valorAtual}"]`)) {
+        select.value = valorAtual;
+    } else if (clientes.length > 0) {
+        select.value = clientes[0].Cliente;
+    }
     
+    // Popula o formulário com os dados do cliente selecionado
+    popularFormularioCliente(clientes, select.value);
+
+    // Adiciona o listener para futuras mudanças
+    select.removeEventListener('change', handleClienteParamChange);
+    select.addEventListener('change', handleClienteParamChange);
+}
+
+function handleClienteParamChange(event) {
+    const select = event.target;
+    const clientes = JSON.parse(select.dataset.clientes || '[]');
+    popularFormularioCliente(clientes, select.value);
+}
+
+function popularFormularioCliente(clientes, clienteSelecionado) {
+    const form = document.getElementById('form-param-clientes');
+    const clienteData = clientes.find(c => c.Cliente === clienteSelecionado);
+    
+    if (clienteData) {
+        form.querySelector('[name="DataInicialSimula"]').value = formatarData(clienteData.DataInicialSimula);
+        form.querySelector('[name="DataFinalSimula"]').value = formatarData(clienteData.DataFinalSimula);
+        form.querySelector('[name="TipoGeracao"]').value = clienteData.TipoGeracao;
+        form.querySelector('[name="IncluirGrupoB"]').checked = clienteData.IncluirGrupoB;
+    } else {
+        // Limpa o formulário se nenhum cliente for selecionado
+        form.reset();
+    }
+}
+function popularFormGerais(simulacaoGeral) {
+    if (!simulacaoGeral) return;
+    document.getElementById('param-pis').value = simulacaoGeral.Pis || '';
+    document.getElementById('param-cofins').value = simulacaoGeral.Cofins || '';
+    document.getElementById('param-custo-garantia').value = simulacaoGeral.PctCustoGarantia || '';
+    document.getElementById('param-meses-garantia').value = simulacaoGeral.MesesGarantia || '';
+    document.getElementById('param-perdas').value = simulacaoGeral.Perdas || '';
+    document.getElementById('param-fonte-base').value = simulacaoGeral.FonteEnergiaBase || 'I0';
+    document.getElementById('param-preco-diesel').value = simulacaoGeral.PrecoDiesel || '';
+    document.getElementById('param-rendimento-gerador').value = simulacaoGeral.RendimentoGerador || '';
+}
+
+function popularTabelaPrecos(precos) {
+    const tbody = document.querySelector('#table-precos-ano tbody');
+    if (!tbody || !precos) return;
+
+    tbody.innerHTML = ''; // Limpa a tabela
+    precos.forEach(preco => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${preco.Ano || ''}</td>
+            <td>${preco.Fonte || ''}</td>
+            <td>${formatNumber(preco.PrecoRS_MWh)}</td>
+            <td>${preco.Corrigir || ''}</td>
+            <td><button class="btn btn-edit btn-sm">Editar</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function popularTabelaCustos(custos) {
+    const tbody = document.querySelector('#table-custos-mes tbody');
+    if (!tbody || !custos) return;
+
+    tbody.innerHTML = ''; // Limpa a tabela
+    custos.forEach(custo => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${custo.MesRef ? new Date(custo.MesRef).toLocaleDateString('pt-BR', {month: '2-digit', year: 'numeric'}) : ''}</td>
+            <td>${formatNumber(custo.LiqMCPACL)}</td>
+            <td>${formatNumber(custo.LiqMCPAPE)}</td>
+            <td>${formatNumber(custo.LiqEnerReserva)}</td>
+            <td>${formatNumber(custo.LiqRCAP)}</td>
+            <td>${formatNumber(custo.SpreadVenda)}</td>
+            <td>${formatNumber(custo.ModelagemMes)}</td>
+            <td><button class="btn btn-edit btn-sm">Editar</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
     // --- VII. EVENT LISTENERS ---
     tabButtons.forEach(button => button.addEventListener('click', () => mudarAba(button.dataset.tab)));
     addLeadBtn.addEventListener('click', () => { limparFormularioLead(); switchScreen('cadastro', 'form'); });
@@ -1004,54 +1482,67 @@ document.addEventListener('DOMContentLoaded', () => {
     addUnidadeBtn.addEventListener('click', () => { if (!estadoAtual.lead.id) { alert("Selecione um lead."); return; } limparFormularioUnidade(); unidadesSubtitle.innerText = `Nova Unidade para: ${estadoAtual.lead.razaoSocial}`; switchScreen('unidades', 'form'); });
     unidadesBackBtn.addEventListener('click', () => switchScreen('unidades', 'listing'));
     unidadeForm.addEventListener('submit', salvarUnidade);
+    clearUnidadeButton.addEventListener('click', limparFormularioUnidade);
     
-    gotoHistoricoFromUnidadesBtn.addEventListener('click', () => { 
-        if (!estadoAtual.unidade.id) { 
-            alert("Nenhuma unidade selecionada."); 
-            return; 
-        } 
-        mudarAba('historico'); 
-        limparFormularioHistorico();
-        switchScreen('historico', 'form'); 
-        historicoSubtitle.innerText = `Adicionando histórico para a UC: ${estadoAtual.unidade.id} (${estadoAtual.unidade.nome || 'Sem Nome'})`; 
+    document.getElementById('ajuste-tarifa-distribuidora-select').addEventListener('change', (event) => {
+        carregarAjusteTarifa(event.target.value);
+    });
+    
+    historicoForm.addEventListener('submit', salvarHistorico);
+    historicoBackBtn.addEventListener('click', () => switchScreen('historico', 'listing'));
+    
+    historicoLeadSelector.addEventListener('change', (e) => {
+        const leadId = e.target.value;
+        estadoAtual.lead.id = leadId;
+        historicoTableBody.innerHTML = `<tr><td colspan="7" class="text-center">Selecione uma unidade.</td></tr>`;
+        historicoAnoSelector.disabled = true;
+        historicoAnoSelector.value = new Date().getFullYear();
+        manageHistoricoBtn.disabled = true;
+        carregarUnidadesEmSeletor(leadId, historicoUnidadeSelector);
     });
 
-    unidadesTableBody.addEventListener('click', async (e) => {
-        const tr = e.target.closest('tr');
-        if (!tr || !estadoAtual.lead.id) return;
-        const linhaAntiga = unidadesTableBody.querySelector('.selected');
-        if (linhaAntiga) linhaAntiga.classList.remove('selected');
-        tr.classList.add('selected');
-        const ucId = tr.dataset.unidadeId;
-        try {
-            const response = await fetch(`${API_URL}/api/leads/${estadoAtual.lead.id}/unidades`);
-            const unidades = await response.json();
-            const unidadeSelecionada = unidades.find(u => u.NumeroDaUcLead == ucId);
-            if (unidadeSelecionada) {
-                selecionarUnidade(unidadeSelecionada); 
-            }
-        } catch (error) {
-            console.error("Erro ao obter dados completos da unidade:", error);
+    historicoUnidadeSelector.addEventListener('change', (e) => {
+        const ucId = e.target.value;
+        estadoAtual.unidade.id = ucId;
+
+        // Limpa a tabela e desabilita os controles
+        historicoTableBody.innerHTML = '';
+        historicoAnoSelector.disabled = true;
+        manageHistoricoBtn.disabled = true;
+
+        if (ucId) {
+            // 1. Carrega TODO o histórico na tabela
+            carregarTabelaHistoricoCompleto(ucId); 
+            
+            // 2. Define o ano atual como um padrão para facilitar a adição de novos dados
+            historicoAnoSelector.value = new Date().getFullYear();
+            
+            // 3. Habilita os controles para o usuário poder agir
+            historicoAnoSelector.disabled = false;
+            manageHistoricoBtn.disabled = false;
         }
     });
-    historicoForm.addEventListener('submit', salvarHistorico);
-    clearHistoricoButton.addEventListener('click', limparFormularioHistorico);
-    
-    addHistoricoBtn.addEventListener('click', () => { 
-        const l=historicoLeadSelector.value, u=historicoUnidadeSelector.value; 
-        if(!l||!u){ 
-            alert("Selecione um lead e unidade."); 
-            return; 
-        } 
-        estadoAtual.lead.id=l; 
-        estadoAtual.unidade.id=u; 
-        limparFormularioHistorico();
-        switchScreen('historico', 'form'); 
+
+// SUBSTITUA O EVENT LISTENER DO BOTÃO POR ESTE
+
+    manageHistoricoBtn.addEventListener('click', () => {
+        const ucId = estadoAtual.unidade.id;
+        // Pega o ano diretamente do campo de input no momento do clique
+        const ano = historicoAnoSelector.value; 
+
+        if (!ucId || !ano || ano.length !== 4) {
+            alert("Selecione uma Unidade e digite um ano válido (4 dígitos) para gerenciar.");
+            return;
+        }
+        
+        // O resto do código permanece igual
+        estadoAtual.historico.ano = ano;
+        document.getElementById('historico-form-ano').value = ano;
+        historicoSubtitle.textContent = `Editando histórico para a UC ${ucId} do ano de ${ano}.`;
+        popularFormularioHistoricoAnual(ucId, ano);
+        switchScreen('historico', 'form');
     });
 
-    historicoBackBtn.addEventListener('click', () => switchScreen('historico', 'listing'));
-    historicoLeadSelector.addEventListener('change', () => { const l=historicoLeadSelector.value; estadoAtual.lead.id=l; historicoTableBody.innerHTML = `<tr><td colspan="20" class="text-center">Selecione uma unidade.</td></tr>`; carregarUnidadesEmSeletor(l, historicoUnidadeSelector); });
-    historicoUnidadeSelector.addEventListener('change', () => { const u=historicoUnidadeSelector.value; estadoAtual.unidade.id=u; if (u) { carregarHistorico(u, historicoTableBody); } else { historicoTableBody.innerHTML = `<tr><td colspan="20" class="text-center">Selecione uma unidade.</td></tr>`; } });
     addPropostaBtn.addEventListener('click', () => { propostaForm.reset(); propostaUnidadeSelector.innerHTML = '<option value="">Selecione um lead primeiro</option>'; propostaUnidadeSelector.disabled = true; switchScreen('proposta', 'form'); });
     propostaBackBtn.addEventListener('click', () => switchScreen('proposta', 'listing'));
     refreshPropostasBtn.addEventListener('click', () => carregarPropostas(filterPropostasInput.value));
@@ -1083,6 +1574,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 simulacaoUnidadeSelector.disabled = false;
             }
         });
+    });
+    // Listeners para o Modal de Ajuste IPCA
+    addIpcaBtn.addEventListener('click', () => {
+        ipcaForm.reset(); // Limpa o formulário
+        ipcaModalTitle.innerHTML = '<i class="fas fa-plus"></i> Adicionar Ajuste IPCA';
+        ipcaForm.dataset.mode = 'add'; // Define o modo como "adicionar"
+        document.getElementById('ipca-ano').disabled = false;
+        abrirModal(ipcaModal);
+    });
+
+    closeIpcaModalBtn.addEventListener('click', () => fecharModal(ipcaModal));
+    cancelIpcaBtn.addEventListener('click', () => fecharModal(ipcaModal));
+
+    ipcaForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(ipcaForm);
+        const data = Object.fromEntries(formData.entries());
+        const mode = ipcaForm.dataset.mode;
+
+        let url = `${API_URL}/api/parametros/ajuste-ipca`;
+        let method = 'POST';
+
+        if (mode === 'edit') {
+            const anoOriginal = ipcaAnoOriginalInput.value;
+            url = `${API_URL}/api/parametros/ajuste-ipca/${anoOriginal}`;
+            method = 'PUT';
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+            
+            alert(result.sucesso);
+            fecharModal(ipcaModal);
+            await carregarAjusteIPCA(); // Atualiza a tabela com os novos dados
+        } catch (error) {
+            alert(`Erro ao salvar: ${error.message}`);
+        }
+    });
+
+    document.getElementById('parametros').addEventListener('click', (event) => {
+        const editButton = event.target.closest('.btn-edit');
+        if (!editButton) return; 
+
+        const table = editButton.closest('table');
+        if (!table) return;
+
+        if (table.id === 'table-ajuste-ipca') {
+            abrirModalEdicaoIPCA(editButton);
+        }
     });
 
     periodoRapidoBtns.forEach(btn => {
@@ -1122,8 +1668,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (ucId) {
             try {
-                const optionSelecionado = select.options[select.selectedIndex];
-                const unidadeSelecionada = JSON.parse(optionSelecionado.dataset.unidade);
+                const responseUnidade = await fetch(`${API_URL}/api/unidade/${encodeURIComponent(ucId)}`);
+                if (!responseUnidade.ok) throw new Error('Falha ao buscar detalhes da unidade.');
+                const unidadeSelecionada = await responseUnidade.json();
 
                 if (unidadeSelecionada) {
                     dadosDaSimulacao.unidade = unidadeSelecionada;
@@ -1134,7 +1681,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     simulacaoDadosAutomaticos.classList.remove('hidden');
                     simulacaoCalcularBtn.disabled = false;
 
-                    const responseHistorico = await fetch(`${API_URL}/api/unidades/${ucId}/historico`);
+                    const responseHistorico = await fetch(`${API_URL}/api/unidades/${encodeURIComponent(ucId)}/historico`);
                     if (!responseHistorico.ok) throw new Error('Falha ao buscar histórico da unidade.');
                     
                     const historico = await responseHistorico.json();
@@ -1206,6 +1753,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    saveAllParamsBtn.addEventListener('click', salvarTodosParametros);
+
+    async function salvarTodosParametros() {
+        saveAllParamsBtn.disabled = true;
+        saveAllParamsBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        const formClientes = document.getElementById('form-param-clientes');
+        const formDataClientes = new FormData(formClientes);
+        const clienteParams = Object.fromEntries(formDataClientes.entries());
+        clienteParams.IncluirGrupoB = formClientes.querySelector('#param-incluir-grupob').checked;
+
+        const formGerais = document.getElementById('form-param-gerais');
+        const formDataGerais = new FormData(formGerais);
+        const geraisParams = Object.fromEntries(formDataGerais.entries());
+
+        const payload = {
+            cliente_params: clienteParams,
+            gerais_params: geraisParams
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/api/parametros/simulacao`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+            
+            alert(result.sucesso);
+            await carregarParametros(); 
+        } catch (error) {
+            alert(`Erro ao salvar os parâmetros: ${error.message}`);
+        } finally {
+            saveAllParamsBtn.disabled = false;
+            saveAllParamsBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Todos os Parâmetros';
+        }
+    }
+    
     simulacaoToggleDetalhesBtn.addEventListener('click', () => {
         const isHidden = simulacaoTabelaDetalhadaContainer.classList.contains('hidden');
         if (isHidden) {
@@ -1219,6 +1805,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- VIII. INICIALIZAÇÃO ---
     console.log('Iniciando aplicação...');
+    historicoAnoSelector.value = new Date().getFullYear();
     carregarLeads();
     carregarEstados(ufSelect);
     carregarEstados(ufUnidadeSelect);

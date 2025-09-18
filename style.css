@@ -1287,3 +1287,117 @@ select option:first-child {
         grid-template-columns: 1fr;
     }
 }
+/* --- ESTILOS PARA SUB-NAVEGAÇÃO NA ABA PARÂMETROS --- */
+.sub-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.sub-nav-button {
+    padding: 10px 20px;
+    border: 2px solid transparent;
+    border-radius: var(--border-radius);
+    background-color: var(--light-color);
+    color: var(--secondary-color);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.sub-nav-button:hover {
+    background-color: #e9ecef;
+    color: var(--dark-color);
+}
+
+.sub-nav-button.active {
+    background-color: white;
+    color: var(--primary-gradient);
+    border-color: #059BE2;
+}
+
+.sub-tab-content {
+    display: none; /* Esconde todas as sub-abas por padrão */
+}
+
+.sub-tab-content.active {
+    display: block; /* Mostra apenas a sub-aba ativa */
+    animation: fadeIn 0.4s ease-in-out;
+}
+/* ===== ESTILOS PARA A TABELA DE EDIÇÃO DE HISTÓRICO (PLANILHA) ===== */
+
+/* Garante que a tabela use todo o espaço disponível no container */
+#historico-input-table {
+    width: 100%;
+    border-collapse: separate; /* Usa separate para permitir espaçamento e bordas arredondadas */
+    border-spacing: 0;
+}
+
+/* Estilo do cabeçalho da tabela */
+#historico-input-table thead th {
+    background-color: #f8f9fa; /* Um cinza bem claro */
+    color: #e2e4e7; /* Texto escuro para contraste */
+    font-weight: 600;
+    font-size: 13px;
+    padding: 12px 8px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 20; /* Garante que fique acima do conteúdo ao rolar */
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Primeira coluna (Mês) com estilo distinto */
+#historico-input-table tbody td:first-child {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    text-align: left;
+    padding-left: 15px;
+    min-width: 100px; /* Garante que o nome do mês não quebre */
+}
+
+/* Estilo geral para as células da tabela */
+#historico-input-table td {
+    padding: 2px; /* Espaçamento mínimo para os inputs preencherem a célula */
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Estilo para as linhas da tabela, com efeito hover */
+#historico-input-table tbody tr:hover {
+    background-color: #e9f7ff; /* Um azul bem claro ao passar o mouse */
+}
+
+/* Estilo principal para os campos de input dentro da tabela */
+#historico-input-table input.numeric-input {
+    width: 100%;
+    height: 100%;
+    padding: 10px 8px;
+    border: 1px solid transparent; /* Bordas transparentes por padrão */
+    border-radius: 4px;
+    background-color: transparent; /* Fundo transparente para herdar o hover da linha */
+    font-family: var(--font-primary);
+    font-size: 14px;
+    text-align: right; /* Alinha os números à direita */
+    transition: all 0.2s ease-in-out;
+    box-shadow: none;
+    outline: none;
+}
+
+/* Efeito de foco no input, simulando a seleção de célula no Excel */
+#historico-input-table input.numeric-input:focus {
+    background-color: #ffffff;
+    border: 2px solid #059BE2; /* Borda azul destacada */
+    box-shadow: 0 0 5px rgba(242, 250, 253, 0.3);
+    position: relative;
+    z-index: 1;
+}
+
+/* Remove as setas de incremento/decremento dos inputs numéricos */
+#historico-input-table input[type="text"]::-webkit-inner-spin-button,
+#historico-input-table input[type="text"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

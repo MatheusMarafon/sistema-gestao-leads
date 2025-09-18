@@ -5,7 +5,7 @@ from flask_cors import CORS
 from datetime import datetime
 from dateutil.relativedelta import (
     relativedelta,
-)  # Importação necessária para o cálculo de datas
+)
 import re
 import os
 import sys
@@ -24,13 +24,19 @@ NOME_TABELA_UNIDADES = "tbl_22_02_01_UnidadesLead"
 NOME_TABELA_HISTORICO = "tbl_22_03_01_HistoricoUcLead"
 NOME_TABELA_VENDEDORES = "tbl_22_04_01_VendedorResponsavel"
 NOME_TABELA_CONTATOS = "tbl_22_05_01_ContatoLead"
-
-# Tabelas de Proposta
 NOME_TABELA_PROPOSTA = "tbl_24_01_01_Proposta"
 NOME_TABELA_OBSERVACOES = "tbl_24_01_02_Observacoes"
 NOME_TABELA_UC_PROPOSTA = "tbl_24_02_01_UcProposta"
 NOME_TABELA_CONTATO_PROPOSTA = "tbl_24_04_01_ContatoProposta"
 NOME_TABELA_DATA_ENVIO_PROPOSTA = "tbl_24_03_01_DataEnvioProposta"
+NOME_TABELA_PARAM_CLIENTES = "tbl_P_01_01_01_Clientes"
+NOME_TABELA_PARAM_SIMULACAO = "tbl_P_01_01_03_DadosSimulacao"
+NOME_TABELA_PARAM_PRECOS_ANO = "tbl_P_01_01_04_PrecoMWhAno"
+NOME_TABELA_PARAM_CUSTOS_MES = "tbl_P_01_01_02_CustosBaseMes"
+NOME_TABELA_AJUSTE_IPCA = "tbl_P_02_01_01_AjusteIPCA"
+NOME_TABELA_AJUSTE_TARIFA = "tbl_P_02_01_02_AjusteTarifa"
+NOME_TABELA_DADOS_GERACAO = "tbl_P_03_01_01_DadosGeracao"
+NOME_TABELA_CURVA_GERACAO = "tbl_P_03_01_02_CurvaGeracao"
 
 
 # --- Funções Auxiliares ---
@@ -86,13 +92,23 @@ def row_to_dict(cursor, row):
 
 
 def to_float(value_str):
-    """Converte uma string para float, tratando vírgulas e valores vazios."""
+    """Converte uma string para float, tratando vírgulas e valores vazios/nulos."""
     if value_str is None or str(value_str).strip() == "":
-        return 0.0
+        return None  # Retorna None para ser inserido como NULO no banco
     try:
         return float(str(value_str).replace(",", "."))
     except (ValueError, TypeError):
-        return 0.0
+        return None
+
+
+def to_int(value_str):
+    """Converte uma string para int, tratando valores vazios ou None."""
+    if value_str is None or str(value_str).strip() == "":
+        return None
+    try:
+        return int(float(str(value_str)))
+    except (ValueError, TypeError):
+        return None
 
 
 def _realizar_calculo_simulacao(dados_simulacao):
@@ -102,7 +118,11 @@ def _realizar_calculo_simulacao(dados_simulacao):
     TARIFA_TUSD_DEMANDA = 30.00
 
     tipo = dados_simulacao.get("tipo")
-    imposto_percentual = to_float(dados_simulacao.get("aliquota_icms", 0))
+    imposto_percentual = (
+        to_float(dados_simulacao.get("aliquota_icms", 0))
+        if dados_simulacao.get("aliquota_icms") is not None
+        else 0.0
+    )
     imposto_fator = (
         1 / (1 - (imposto_percentual / 100)) if imposto_percentual < 100 else 1
     )
@@ -113,11 +133,11 @@ def _realizar_calculo_simulacao(dados_simulacao):
             return None  # Retorna None se não houver histórico para o cliente
 
         total_consumo = sum(
-            to_float(mes.get("kWhProjPonta", 0))
-            + to_float(mes.get("kWhProjForaPonta", 0))
+            (to_float(mes.get("kWhProjPonta")) or 0)
+            + (to_float(mes.get("kWhProjForaPonta")) or 0)
             for mes in historico
         )
-        total_demanda = sum(to_float(mes.get("DemandaCP", 0)) for mes in historico)
+        total_demanda = sum(to_float(mes.get("DemandaCP")) or 0 for mes in historico)
         num_meses_historico = len(historico)
 
         consumo_medio_mensal = (
@@ -132,8 +152,8 @@ def _realizar_calculo_simulacao(dados_simulacao):
         custo_demanda_medio = demanda_media_mensal * TARIFA_TUSD_DEMANDA
 
     else:  # tipo == 'lead'
-        consumo_medio_mensal = to_float(dados_simulacao.get("consumo_estimado"))
-        demanda_media_mensal = to_float(dados_simulacao.get("demanda_estimada"))
+        consumo_medio_mensal = to_float(dados_simulacao.get("consumo_estimado")) or 0
+        demanda_media_mensal = to_float(dados_simulacao.get("demanda_estimada")) or 0
 
         custo_consumo_medio = consumo_medio_mensal * TARIFA_TE_FORA_PONTA
         custo_demanda_medio = demanda_media_mensal * TARIFA_TUSD_DEMANDA
@@ -330,7 +350,7 @@ def handle_leads():
             conn.close()
 
 
-@app.route("/api/leads/<path:lead_id>", methods=["GET", "PUT", "DELETE"])
+@app.route("/api/leads/<path:lead_id>", methods=["GET", "PUT"])
 def handle_lead_by_id(lead_id):
     conn = get_db_connection()
     if conn is None:
@@ -374,17 +394,6 @@ def handle_lead_by_id(lead_id):
                 else (jsonify({"erro": "Lead não encontrado"}), 404)
             )
 
-        if request.method == "DELETE":
-            cursor.execute(
-                f"DELETE FROM [{NOME_TABELA_LEADS}] WHERE Cpf_CnpjLead = ?", lead_id
-            )
-            conn.commit()
-            return (
-                jsonify({"sucesso": "Lead excluído com sucesso"})
-                if cursor.rowcount > 0
-                else (jsonify({"erro": "Lead não encontrado"}), 404)
-            )
-
     except pyodbc.Error as ex:
         return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
     finally:
@@ -401,6 +410,14 @@ def add_vendedor_contato(lead_id):
 
     try:
         cursor = conn.cursor()
+        # Limpa registros antigos para este lead antes de inserir novos
+        cursor.execute(
+            f"DELETE FROM [{NOME_TABELA_VENDEDORES}] WHERE Cpf_CnpjLead = ?", lead_id
+        )
+        cursor.execute(
+            f"DELETE FROM [{NOME_TABELA_CONTATOS}] WHERE Cpf_CnpjLead = ?", lead_id
+        )
+
         if data.get("Vendedor"):
             try:
                 sql_vendedor = f"INSERT INTO [{NOME_TABELA_VENDEDORES}] (Cpf_CnpjLead, Vendedor, DataDeEnvioLead, ValidadeLead) VALUES (?, ?, ?, ?)"
@@ -490,118 +507,116 @@ def handle_unidades(lead_id):
             conn.close()
 
 
-@app.route("/api/unidades/<path:uc_id>", methods=["PUT"])
-def update_unidade(uc_id):
-    data = request.json
+@app.route("/api/unidade/<path:uc_id>", methods=["GET"])
+def get_unidade_by_id(uc_id):
     conn = get_db_connection()
     if conn is None:
-        return jsonify({"erro": "Falha na ligação."}), 500
+        return jsonify({"erro": "Falha na conexão com o banco de dados."}), 500
 
     try:
         cursor = conn.cursor()
-        sql = f"""UPDATE [{NOME_TABELA_UNIDADES}] SET CnpjDistribuidora = ?, CnpjDaUnidadeConsumidora = ?, NomeDaUnidade = ?, Logradouro = ?, Numero = ?, Complemento = ?, Bairro = ?, Uf = ?, Cidade = ?, Cep = ?, MercadoAtual = ?, SubgrupoTarifario = ?, Tarifa = ?, AliquotaICMS = ?, AplicaContaEHidrica = ?, LiminarICMSDemanda = ?, LiminarICMSTusd = ?, BeneficioRuralIrrigacao = ?, RuralOuSazoReconhecida = ?, SaldoMaisRecenteSCEE = ? WHERE NumeroDaUcLead = ? AND Cpf_CnpjLead = ?"""
-        params = (
-            data.get("CnpjDistribuidora"),
-            data.get("CnpjDaUnidadeConsumidora"),
-            data.get("NomeDaUnidade"),
-            data.get("Logradouro"),
-            data.get("Numero"),
-            data.get("Complemento"),
-            data.get("Bairro"),
-            data.get("Uf"),
-            data.get("Cidade"),
-            data.get("Cep"),
-            data.get("MercadoAtual"),
-            data.get("SubgrupoTarifario"),
-            data.get("Tarifa"),
-            to_float(data.get("AliquotaICMS")),
-            data.get("AplicaContaEHidrica"),
-            data.get("LiminarICMSDemanda"),
-            data.get("LiminarICMSTusd"),
-            to_float(data.get("BeneficioRuralIrrigacao")),
-            data.get("RuralOuSazoReconhecida"),
-            to_float(data.get("SaldoMaisRecenteSCEE")),
-            uc_id,
-            data.get("Cpf_CnpjLead"),
-        )
-        cursor.execute(sql, params)
-        conn.commit()
-        return (
-            jsonify({"sucesso": "Unidade atualizada com sucesso!"})
-            if cursor.rowcount > 0
-            else (jsonify({"erro": "Nenhuma unidade encontrada para atualizar."}), 404)
-        )
-    except pyodbc.Error as ex:
-        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+        query = f"SELECT * FROM [{NOME_TABELA_UNIDADES}] WHERE NumeroDaUcLead = ?"
+        cursor.execute(query, uc_id)
+        unidade_row = cursor.fetchone()
+
+        if not unidade_row:
+            return jsonify({"erro": "Unidade Consumidora não encontrada."}), 404
+
+        unidade_data = row_to_dict(cursor, unidade_row)
+        return jsonify(unidade_data)
+
+    except Exception as e:
+        print(f"[ERRO] Falha ao buscar unidade por ID: {e}")
+        return jsonify({"erro": f"Ocorreu um erro interno: {e}"}), 500
     finally:
         if conn:
             conn.close()
 
 
-@app.route("/api/unidades/<path:uc_id>/historico", methods=["GET", "POST"])
-def handle_historico(uc_id):
+@app.route("/api/unidades/<path:uc_id_original>", methods=["PUT", "DELETE"])
+def update_or_delete_unidade(uc_id_original):
     conn = get_db_connection()
     if conn is None:
         return jsonify({"erro": "Falha na ligação."}), 500
-
     try:
         cursor = conn.cursor()
-        if request.method == "GET":
-            cursor.execute(
-                f"SELECT * FROM [{NOME_TABELA_HISTORICO}] WHERE NumeroDaUcLead = ? ORDER BY IDMes DESC",
-                uc_id,
-            )
-            historico_list = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-            for item in historico_list:
-                if item.get("IDMes"):
-                    id_mes_str = str(item["IDMes"])
-                    if len(id_mes_str) == 6:
-                        item["IDMes"] = f"{id_mes_str[:4]}-{id_mes_str[4:]}"
-            return jsonify(historico_list)
+        data = request.json
 
-        if request.method == "POST":
-            data = request.json
-            id_mes_str = re.sub(r"\D", "", data.get("IDMes", ""))
-            if len(id_mes_str) != 6:
-                return (
-                    jsonify(
-                        {
-                            "erro": "O ID Mês é obrigatório e deve estar no formato YYYY-MM."
-                        }
-                    ),
-                    400,
-                )
-
-            sql = f"""INSERT INTO [{NOME_TABELA_HISTORICO}] (NumeroDaUcLead, IDMes, DemandaCP, DemandaCFP, DemandaCG, kWProjPonta, kWProjForaPonta, kWhProjPonta, kWhProjForaPonta, kWhProjHRes, kWhProjPontaG, kWhProjForaPontaG, kWProjG, kWhProjDieselP, kWhCompensadoP, kWhCompensadoFP, kWhCompensadoHr, kWGeracaoProjetada, DataRegistroHistorico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+        if request.method == "PUT":
+            sql = f"""UPDATE [{NOME_TABELA_UNIDADES}] SET 
+                        NumeroDaUcLead = ?, CnpjDistribuidora = ?, CnpjDaUnidadeConsumidora = ?, NomeDaUnidade = ?, 
+                        Logradouro = ?, Numero = ?, Complemento = ?, Bairro = ?, Uf = ?, Cidade = ?, Cep = ?, 
+                        MercadoAtual = ?, SubgrupoTarifario = ?, Tarifa = ?, AliquotaICMS = ?, 
+                        AplicaContaEHidrica = ?, LiminarICMSDemanda = ?, LiminarICMSTusd = ?, 
+                        BeneficioRuralIrrigacao = ?, RuralOuSazoReconhecida = ?, SaldoMaisRecenteSCEE = ? 
+                        WHERE NumeroDaUcLead = ? AND Cpf_CnpjLead = ?"""
             params = (
-                uc_id,
-                int(id_mes_str),
-                to_float(data.get("DemandaCP")),
-                to_float(data.get("DemandaCFP")),
-                to_float(data.get("DemandaCG")),
-                to_float(data.get("kWProjPonta")),
-                to_float(data.get("kWProjForaPonta")),
-                to_float(data.get("kWhProjPonta")),
-                to_float(data.get("kWhProjForaPonta")),
-                to_float(data.get("kWhProjHRes")),
-                to_float(data.get("kWhProjPontaG")),
-                to_float(data.get("kWhProjForaPontaG")),
-                to_float(data.get("kWProjG")),
-                to_float(data.get("kWhProjDieselP")),
-                to_float(data.get("kWhCompensadoP")),
-                to_float(data.get("kWhCompensadoFP")),
-                to_float(data.get("kWhCompensadoHr")),
-                to_float(data.get("kWGeracaoProjetada")),
-                datetime.now(),
+                data.get("NumeroDaUcLead"),
+                data.get("CnpjDistribuidora"),
+                data.get("CnpjDaUnidadeConsumidora"),
+                data.get("NomeDaUnidade"),
+                data.get("Logradouro"),
+                data.get("Numero"),
+                data.get("Complemento"),
+                data.get("Bairro"),
+                data.get("Uf"),
+                data.get("Cidade"),
+                data.get("Cep"),
+                data.get("MercadoAtual"),
+                data.get("SubgrupoTarifario"),
+                data.get("Tarifa"),
+                to_float(data.get("AliquotaICMS")),
+                data.get("AplicaContaEHidrica"),
+                data.get("LiminarICMSDemanda"),
+                data.get("LiminarICMSTusd"),
+                to_float(data.get("BeneficioRuralIrrigacao")),
+                data.get("RuralOuSazoReconhecida"),
+                to_float(data.get("SaldoMaisRecenteSCEE")),
+                uc_id_original,
+                data.get("Cpf_CnpjLead"),
             )
             cursor.execute(sql, params)
             conn.commit()
-            return jsonify({"sucesso": "Registo de histórico criado com sucesso!"}), 201
-    except pyodbc.IntegrityError:
-        return (
-            jsonify({"erro": "Já existe um histórico para esta unidade neste mês."}),
-            409,
-        )
+            return (
+                jsonify({"sucesso": "Unidade atualizada com sucesso!"})
+                if cursor.rowcount > 0
+                else (
+                    jsonify({"erro": "Nenhuma unidade encontrada para atualizar."}),
+                    404,
+                )
+            )
+
+        if request.method == "DELETE":
+            lead_id = data.get("Cpf_CnpjLead")
+            if not lead_id:
+                return (
+                    jsonify({"erro": "CPF/CNPJ do lead é necessário para exclusão."}),
+                    400,
+                )
+
+            cursor.execute(
+                f"DELETE FROM [{NOME_TABELA_HISTORICO}] WHERE NumeroDaUcLead = ?",
+                uc_id_original,
+            )
+            cursor.execute(
+                f"DELETE FROM [{NOME_TABELA_UNIDADES}] WHERE NumeroDaUcLead = ? AND Cpf_CnpjLead = ?",
+                uc_id_original,
+                lead_id,
+            )
+            conn.commit()
+            return (
+                jsonify({"sucesso": "Unidade e seu histórico foram excluídos."})
+                if cursor.rowcount > 0
+                else (
+                    jsonify(
+                        {
+                            "erro": "Unidade não encontrada ou não pertence ao lead informado."
+                        }
+                    ),
+                    404,
+                )
+            )
+
     except pyodbc.Error as ex:
         return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
     finally:
@@ -609,52 +624,131 @@ def handle_historico(uc_id):
             conn.close()
 
 
-@app.route("/api/historico/<path:uc_id>/<string:id_mes>", methods=["PUT"])
-def update_historico(uc_id, id_mes):
+@app.route("/api/unidades/<path:uc_id>/historico", methods=["GET"])
+def get_all_historico(uc_id):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na ligação."}), 500
+    try:
+        cursor = conn.cursor()
+
+        sql_query = f"SELECT * FROM [{NOME_TABELA_HISTORICO}] WHERE TRIM(NumeroDaUcLead) = ? ORDER BY IDMes DESC"
+
+        cursor.execute(sql_query, uc_id)
+        historico_list = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+
+        # Formata o IDMes para a interface (ex: 202401 vira "2024-01")
+        for item in historico_list:
+            if item.get("IDMes"):
+                id_mes_str = str(item["IDMes"])
+                if len(id_mes_str) == 6:
+                    item["IDMes"] = f"{id_mes_str[:4]}-{id_mes_str[4:]}"
+        return jsonify(historico_list)
+
+    except pyodbc.Error as ex:
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/unidades/<path:uc_id>/historico/<int:ano>", methods=["GET"])
+def get_historico_by_year(uc_id, ano):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na ligação."}), 500
+    try:
+        cursor = conn.cursor()
+        start_idmes = ano * 100 + 1
+        end_idmes = ano * 100 + 12
+        cursor.execute(
+            f"SELECT * FROM [{NOME_TABELA_HISTORICO}] WHERE NumeroDaUcLead = ? AND IDMes >= ? AND IDMes <= ? ORDER BY IDMes ASC",
+            uc_id,
+            start_idmes,
+            end_idmes,
+        )
+        historico_list = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        for item in historico_list:
+            if item.get("IDMes"):
+                id_mes_str = str(item["IDMes"])
+                if len(id_mes_str) == 6:
+                    item["IDMes"] = f"{id_mes_str[:4]}-{id_mes_str[4:]}"
+        return jsonify(historico_list)
+    except pyodbc.Error as ex:
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/unidades/<path:uc_id>/historico/batch", methods=["POST"])
+def batch_update_historico(uc_id):
     data = request.json
-    id_mes_int = int(id_mes.replace("-", ""))
+    ano = data.get("ano")
+    dados_meses = data.get("dados")
+
+    if not ano or dados_meses is None:
+        return jsonify({"erro": "Ano e dados do histórico são obrigatórios."}), 400
+
     conn = get_db_connection()
     if conn is None:
         return jsonify({"erro": "Falha na ligação."}), 500
 
     try:
         cursor = conn.cursor()
-        sql = f"""UPDATE [{NOME_TABELA_HISTORICO}] SET DemandaCP = ?, DemandaCFP = ?, DemandaCG = ?, kWProjPonta = ?, kWProjForaPonta = ?, kWhProjPonta = ?, kWhProjForaPonta = ?, kWhProjHRes = ?, kWhProjPontaG = ?, kWhProjForaPontaG = ?, kWProjG = ?, kWhProjDieselP = ?, kWhCompensadoP = ?, kWhCompensadoFP = ?, kWhCompensadoHr = ?, kWGeracaoProjetada = ? WHERE NumeroDaUcLead = ? AND IDMes = ?"""
-        params = (
-            to_float(data.get("DemandaCP")),
-            to_float(data.get("DemandaCFP")),
-            to_float(data.get("DemandaCG")),
-            to_float(data.get("kWProjPonta")),
-            to_float(data.get("kWProjForaPonta")),
-            to_float(data.get("kWhProjPonta")),
-            to_float(data.get("kWhProjForaPonta")),
-            to_float(data.get("kWhProjHRes")),
-            to_float(data.get("kWhProjPontaG")),
-            to_float(data.get("kWhProjForaPontaG")),
-            to_float(data.get("kWProjG")),
-            to_float(data.get("kWhProjDieselP")),
-            to_float(data.get("kWhCompensadoP")),
-            to_float(data.get("kWhCompensadoFP")),
-            to_float(data.get("kWhCompensadoHr")),
-            to_float(data.get("kWGeracaoProjetada")),
-            uc_id,
-            id_mes_int,
+        conn.autocommit = False  # Inicia a transação
+
+        # 1. Apaga TODOS os registros de histórico existentes para esta Unidade Consumidora.
+        # Isso é necessário para evitar erros de chave duplicada (ex: tentar inserir o mês 9 quando ele já existe).
+        cursor.execute(
+            f"DELETE FROM [{NOME_TABELA_HISTORICO}] WHERE NumeroDaUcLead = ?", uc_id
         )
-        cursor.execute(sql, params)
-        conn.commit()
-        return (
-            jsonify({"sucesso": "Registo de histórico atualizado com sucesso!"})
-            if cursor.rowcount > 0
-            else (
-                jsonify(
-                    {"erro": "Nenhum registo de histórico encontrado para atualizar."}
-                ),
-                404,
+
+        # 2. Insere os novos registros com apenas o número do mês no IDMes.
+        sql_insert = f"""INSERT INTO [{NOME_TABELA_HISTORICO}] (
+                        NumeroDaUcLead, IDMes, DemandaCP, DemandaCFP, DemandaCG, kWProjPonta, kWProjForaPonta, 
+                        kWhProjPonta, kWhProjForaPonta, kWhProjHRes, kWhProjPontaG, kWhProjForaPontaG, 
+                        kWProjG, kWhProjDieselP, kWhCompensadoP, kWhCompensadoFP, kWhCompensadoHr, 
+                        kWGeracaoProjetada, DataRegistroHistorico
+                      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+
+        for mes_data in dados_meses:
+            # --->>> ALTERAÇÃO PRINCIPAL AQUI <<<---
+            # Extrai apenas o número do mês (ex: '2025-09' vira o número inteiro 9)
+            mes_apenas = int(str(mes_data.get("IDMes")).split("-")[1])
+
+            params = (
+                uc_id,
+                mes_apenas,  # Salva apenas o número do mês como um inteiro
+                to_float(mes_data.get("DemandaCP")),
+                to_float(mes_data.get("DemandaCFP")),
+                to_float(mes_data.get("DemandaCG")),
+                to_float(mes_data.get("kWProjPonta")),
+                to_float(mes_data.get("kWProjForaPonta")),
+                to_float(mes_data.get("kWhProjPonta")),
+                to_float(mes_data.get("kWhProjForaPonta")),
+                to_float(mes_data.get("kWhProjHRes")),
+                to_float(mes_data.get("kWhProjPontaG")),
+                to_float(mes_data.get("kWhProjForaPontaG")),
+                to_float(mes_data.get("kWProjG")),
+                to_float(mes_data.get("kWhProjDieselP")),
+                to_float(mes_data.get("kWhCompensadoP")),
+                to_float(mes_data.get("kWhCompensadoFP")),
+                to_float(mes_data.get("kWhCompensadoHr")),
+                to_float(mes_data.get("kWGeracaoProjetada")),
+                datetime.now(),
             )
-        )
-    except pyodbc.Error as ex:
-        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+            cursor.execute(sql_insert, params)
+
+        conn.commit()  # Confirma a transação
+        return jsonify({"sucesso": f"Histórico para o ano {ano} salvo com sucesso!"})
+
+    except Exception as e:
+        conn.rollback()  # Desfaz a transação em caso de erro
+        print(f"[ERRO] Falha ao salvar histórico em lote: {e}")
+        return jsonify({"erro": f"Erro ao salvar histórico em lote: {e}"}), 500
     finally:
+        conn.autocommit = True
         if conn:
             conn.close()
 
@@ -664,7 +758,6 @@ def handle_propostas():
     conn = get_db_connection()
     if conn is None:
         return jsonify({"erro": "Falha na ligação à base de dados."}), 500
-
     try:
         cursor = conn.cursor()
         if request.method == "GET":
@@ -755,7 +848,6 @@ def handle_propostas():
             conn.close()
 
 
-# --- Rotas de Simulação e Dashboard ---
 @app.route("/api/simulacao/calcular", methods=["POST"])
 def calcular_simulacao_acr():
     data = request.json
@@ -800,13 +892,16 @@ def calcular_simulacao_acr():
 
             cursor = conn.cursor()
             cursor.execute(
-                f"SELECT AliquotaICMS FROM [{NOME_TABELA_UNIDADES}] WHERE NumeroDaUcLead = ?",
+                f"SELECT * FROM [{NOME_TABELA_UNIDADES}] WHERE NumeroDaUcLead = ?",
                 uc_id,
             )
             unidade_row = cursor.fetchone()
             if not unidade_row:
                 return jsonify({"erro": "Unidade não encontrada."}), 404
-            dados_para_calculo["aliquota_icms"] = unidade_row.AliquotaICMS
+
+            unidade_info = row_to_dict(cursor, unidade_row)
+            dados_para_calculo["unidade_info"] = unidade_info
+            dados_para_calculo["aliquota_icms"] = unidade_info.get("AliquotaICMS")
 
             cursor.execute(
                 f"SELECT * FROM [{NOME_TABELA_HISTORICO}] WHERE NumeroDaUcLead = ?",
@@ -826,7 +921,11 @@ def calcular_simulacao_acr():
         else:  # tipo == 'lead'
             dados_para_calculo["consumo_estimado"] = data.get("consumo_estimado")
             dados_para_calculo["demanda_estimada"] = data.get("demanda_estimada")
-            dados_para_calculo["aliquota_icms"] = data.get("aliquota_icms", 17.0)
+            dados_para_calculo["unidade_info"] = {
+                "AliquotaICMS": 17.0,
+                "SubgrupoTarifario": "B1",
+                "Tarifa": "Convencional",
+            }
 
         resultados = _realizar_calculo_simulacao(dados_para_calculo)
 
@@ -859,27 +958,28 @@ def get_dashboard_data():
     except (TypeError, ValueError):
         return jsonify({"erro": "Formato de data inválido para o dashboard."}), 400
 
-    dados_para_calculo_cativo = {
-        "tipo": "cliente",
-        "data_inicio_obj": data_inicio_obj,
-        "duracao_meses": duracao_meses,
-    }
-
     conn = get_db_connection()
     if conn is None:
         return jsonify({"erro": "Falha na conexão."}), 500
 
     try:
+        dados_para_calculo_cativo = {
+            "tipo": "cliente",
+            "data_inicio_obj": data_inicio_obj,
+            "duracao_meses": duracao_meses,
+        }
         cursor = conn.cursor()
         uc_id = data_req.get("uc_id")
         cursor.execute(
-            f"SELECT AliquotaICMS FROM [{NOME_TABELA_UNIDADES}] WHERE NumeroDaUcLead = ?",
-            uc_id,
+            f"SELECT * FROM [{NOME_TABELA_UNIDADES}] WHERE NumeroDaUcLead = ?", uc_id
         )
         unidade_row = cursor.fetchone()
         if not unidade_row:
             return jsonify({"erro": "Unidade não encontrada."}), 404
-        dados_para_calculo_cativo["aliquota_icms"] = unidade_row.AliquotaICMS
+
+        unidade_info = row_to_dict(cursor, unidade_row)
+        dados_para_calculo_cativo["unidade_info"] = unidade_info
+        dados_para_calculo_cativo["aliquota_icms"] = unidade_info.get("AliquotaICMS")
 
         cursor.execute(
             f"SELECT * FROM [{NOME_TABELA_HISTORICO}] WHERE NumeroDaUcLead = ?", uc_id
@@ -929,9 +1029,244 @@ def get_dashboard_data():
             conn.close()
 
 
+@app.route("/api/parametros", methods=["GET"])
+def get_parametros():
+    """Busca todos os dados de configuração da aba Parâmetros."""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão com o banco de dados."}), 500
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM [{NOME_TABELA_PARAM_CLIENTES}]")
+        param_clientes = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        cursor.execute(f"SELECT TOP 1 * FROM [{NOME_TABELA_PARAM_SIMULACAO}]")
+        row = cursor.fetchone()
+        param_simulacao = row_to_dict(cursor, row) if row else {}
+        cursor.execute(
+            f"SELECT * FROM [{NOME_TABELA_PARAM_PRECOS_ANO}] ORDER BY Ano DESC"
+        )
+        param_precos_ano = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        cursor.execute(
+            f"SELECT * FROM [{NOME_TABELA_PARAM_CUSTOS_MES}] ORDER BY MesRef DESC"
+        )
+        param_custos_mes = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        return jsonify(
+            {
+                "clientes": param_clientes,
+                "simulacao_geral": param_simulacao,
+                "precos_ano": param_precos_ano,
+                "custos_mes": param_custos_mes,
+            }
+        )
+    except pyodbc.Error as ex:
+        print(f"[ERRO] Erro no endpoint /api/parametros: {ex}")
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/parametros/ajuste-ipca", methods=["GET", "POST"])
+def handle_ajuste_ipca():
+    """Busca ou adiciona registros de ajuste de IPCA"""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+    try:
+        cursor = conn.cursor()
+        if request.method == "POST":
+            data = request.json
+            ano = data.get("Ano")
+            pct_ipca = data.get("PctIPCA")
+
+            if not ano or pct_ipca is None:
+                return jsonify({"erro": "Ano e Percentual são obrigatórios."}), 400
+
+            sql = (
+                f"INSERT INTO [{NOME_TABELA_AJUSTE_IPCA}] (Ano, PctIPCA) VALUES (?, ?)"
+            )
+            cursor.execute(sql, int(ano), to_float(pct_ipca))
+            conn.commit()
+            return jsonify({"sucesso": "Ajuste IPCA adicionado com sucesso!"}), 201
+
+        cursor.execute(f"SELECT * FROM [{NOME_TABELA_AJUSTE_IPCA}] ORDER BY Ano DESC")
+        data = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        return jsonify(data)
+    except pyodbc.Error as ex:
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/parametros/distribuidoras", methods=["GET"])
+def get_distribuidoras():
+    """Busca uma lista única de CNPJs de distribuidoras"""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT DISTINCT CnpjDistribuidora FROM [{NOME_TABELA_AJUSTE_TARIFA}] ORDER BY CnpjDistribuidora"
+        )
+        data = [row[0] for row in cursor.fetchall() if row[0] is not None]
+        return jsonify(data)
+    except pyodbc.Error as ex:
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/parametros/ajuste-tarifa/<path:cnpj_distribuidora>", methods=["GET"])
+def get_ajuste_tarifa_por_cnpj(cnpj_distribuidora):
+    """Busca os ajustes de tarifa para uma distribuidora específica"""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT * FROM [{NOME_TABELA_AJUSTE_TARIFA}] WHERE CnpjDistribuidora = ? ORDER BY Ano DESC",
+            cnpj_distribuidora,
+        )
+        data = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        return jsonify(data)
+    except pyodbc.Error as ex:
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/parametros/geracao", methods=["GET"])
+def get_dados_geracao():
+    """Busca os dados de Geração e Curva de Geração."""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão com o banco de dados."}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM [{NOME_TABELA_DADOS_GERACAO}]")
+        dados_geracao = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        cursor.execute(
+            f"SELECT * FROM [{NOME_TABELA_CURVA_GERACAO}] ORDER BY IdMes DESC"
+        )
+        curva_geracao = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        return jsonify({"dados_geracao": dados_geracao, "curva_geracao": curva_geracao})
+    except pyodbc.Error as ex:
+        print(f"[ERRO] Erro no endpoint /api/parametros/geracao: {ex}")
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/parametros/ajuste-ipca/<int:ano>", methods=["PUT"])
+def update_ajuste_ipca(ano):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+    try:
+        data = request.json
+        pct_ipca = data.get("PctIPCA")
+        novo_ano = data.get("Ano")
+
+        if pct_ipca is None or novo_ano is None:
+            return jsonify({"erro": "Ano e Percentual são obrigatórios."}), 400
+
+        cursor = conn.cursor()
+        sql = (
+            f"UPDATE [{NOME_TABELA_AJUSTE_IPCA}] SET Ano = ?, PctIPCA = ? WHERE Ano = ?"
+        )
+        cursor.execute(sql, int(novo_ano), to_float(pct_ipca), ano)
+        conn.commit()
+        if cursor.rowcount == 0:
+            return (
+                jsonify({"erro": "Nenhum registro encontrado para o ano fornecido."}),
+                404,
+            )
+        return jsonify({"sucesso": "Ajuste IPCA atualizado com sucesso!"})
+    except pyodbc.Error as ex:
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/parametros/simulacao", methods=["POST"])
+def save_parametros_simulacao():
+    """Salva os parâmetros dos formulários da aba Simulação e Preços."""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão com o banco de dados."}), 500
+    try:
+        data = request.json
+        cliente_data = data.get("cliente_params")
+        gerais_data = data.get("gerais_params")
+        cursor = conn.cursor()
+
+        if cliente_data:
+            cliente_selecionado = cliente_data.get("Cliente")
+            if cliente_selecionado:
+                data_inicial_str = cliente_data.get("DataInicialSimula")
+                data_final_str = cliente_data.get("DataFinalSimula")
+                data_inicial_obj = (
+                    datetime.strptime(data_inicial_str, "%d/%m/%Y")
+                    if data_inicial_str
+                    else None
+                )
+                data_final_obj = (
+                    datetime.strptime(data_final_str, "%d/%m/%Y")
+                    if data_final_str
+                    else None
+                )
+
+                sql_cliente = f"""UPDATE [{NOME_TABELA_PARAM_CLIENTES}] SET
+                                  DataInicialSimula = ?, DataFinalSimula = ?, TipoGeracao = ?, IncluirGrupoB = ?
+                                  WHERE Cliente = ?"""
+                params_cliente = (
+                    data_inicial_obj,
+                    data_final_obj,
+                    cliente_data.get("TipoGeracao"),
+                    bool(cliente_data.get("IncluirGrupoB")),
+                    cliente_selecionado,
+                )
+                cursor.execute(sql_cliente, params_cliente)
+
+        if gerais_data:
+            sql_gerais = f"""UPDATE [{NOME_TABELA_PARAM_SIMULACAO}] SET
+                              Pis = ?, Cofins = ?, PctCustoGarantia = ?, MesesGarantia = ?,
+                              Perdas = ?, FonteEnergiaBase = ?, PrecoDiesel = ?, RendimentoGerador = ?"""
+            params_gerais = (
+                to_float(gerais_data.get("Pis")),
+                to_float(gerais_data.get("Cofins")),
+                to_float(gerais_data.get("PctCustoGarantia")),
+                to_int(gerais_data.get("MesesGarantia")),
+                to_float(gerais_data.get("Perdas")),
+                gerais_data.get("FonteEnergiaBase"),
+                to_float(gerais_data.get("PrecoDiesel")),
+                to_float(gerais_data.get("RendimentoGerador")),
+            )
+            cursor.execute(sql_gerais, params_gerais)
+
+        conn.commit()
+        return jsonify({"sucesso": "Parâmetros de simulação salvos com sucesso!"})
+
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERRO] Falha ao salvar parâmetros de simulação: {e}")
+        return jsonify({"erro": f"Ocorreu um erro inesperado: {e}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 @app.route("/")
 def index():
-    return app.send_static_file("index.html")
+    return send_from_directory(".", "index.html")
 
 
 if __name__ == "__main__":
