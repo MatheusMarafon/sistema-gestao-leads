@@ -66,6 +66,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const vendedorContatoForm = document.getElementById('vendedor-contato-form');
     const calendarModal = document.getElementById('calendar-modal');
     const calendarWrapper = document.getElementById('calendar-wrapper');
+    const precoMwhModal = document.getElementById('preco-mwh-modal');
+    const closePrecoMwhModalBtn = document.getElementById('close-preco-mwh-modal');
+    const cancelPrecoMwhBtn = document.getElementById('cancel-preco-mwh-button');
+    const precoMwhForm = document.getElementById('preco-mwh-form');
+    const custosMesModal = document.getElementById('custos-mes-modal');
+    const closeCustosMesModalBtn = document.getElementById('close-custos-mes-modal');
+    const cancelCustosMesBtn = document.getElementById('cancel-custos-mes-button');
+    const custosMesForm = document.getElementById('custos-mes-form');
+    const ajusteTarifaModal = document.getElementById('ajuste-tarifa-modal');
+    const closeAjusteTarifaModalBtn = document.getElementById('close-ajuste-tarifa-modal');
+    const cancelAjusteTarifaBtn = document.getElementById('cancel-ajuste-tarifa-button');
+    const ajusteTarifaForm = document.getElementById('ajuste-tarifa-form');
+    const dadosGeracaoModal = document.getElementById('dados-geracao-modal');
+    const closeDadosGeracaoModalBtn = document.getElementById('close-dados-geracao-modal');
+    const cancelDadosGeracaoBtn = document.getElementById('cancel-dados-geracao-button');
+    const dadosGeracaoForm = document.getElementById('dados-geracao-form');
+    const curvaGeracaoModal = document.getElementById('curva-geracao-modal');
+    const closeCurvaGeracaoModalBtn = document.getElementById('close-curva-geracao-modal');
+    const cancelCurvaGeracaoBtn = document.getElementById('cancel-curva-geracao-button');
+    const curvaGeracaoForm = document.getElementById('curva-geracao-form');
+
+        // Modal de Ajuste IPCA
+    const addIpcaBtn = document.getElementById('add-ipca-btn');
+    const ipcaModal = document.getElementById('ipca-modal');
+    const ipcaModalTitle = document.getElementById('ipca-modal-title');
+    const closeIpcaModalBtn = document.getElementById('close-ipca-modal');
+    const cancelIpcaBtn = document.getElementById('cancel-ipca-button');
+    const ipcaForm = document.getElementById('ipca-form');
+    const ipcaAnoOriginalInput = document.getElementById('ipca-ano-original');
 
     // Módulo de Simulação (ACR)
     const simulacaoLeadSelector = document.getElementById('simulacao-lead-selector');
@@ -111,14 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalEconomia = dashboardTab.querySelector('#total-economia');
     const ctxDashboard = dashboardTab.querySelector('#simulador-grafico-economia').getContext('2d');
 
-    // Modal de Ajuste IPCA
-    const addIpcaBtn = document.getElementById('add-ipca-btn');
-    const ipcaModal = document.getElementById('ipca-modal');
-    const ipcaModalTitle = document.getElementById('ipca-modal-title');
-    const closeIpcaModalBtn = document.getElementById('close-ipca-modal');
-    const cancelIpcaBtn = document.getElementById('cancel-ipca-button');
-    const ipcaForm = document.getElementById('ipca-form');
-    const ipcaAnoOriginalInput = document.getElementById('ipca-ano-original');
+
 
     // --- II. ESTADO GLOBAL DA APLICAÇÃO ---
     let debounceTimer;
@@ -492,8 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 unidadesTableBody.appendChild(tr);
             });
 
-            // --->>> NOVA LÓGICA ADICIONADA AQUI <<<---
-            // Após a tabela ser criada, encontra a primeira linha e a seleciona automaticamente.
             const primeiraLinha = unidadesTableBody.querySelector('tr');
             if (primeiraLinha) {
                 primeiraLinha.click(); // Simula um clique para carregar o histórico
@@ -1348,16 +1368,46 @@ function popularTabelaDadosGeracao(dados) {
         tbody.appendChild(tr);
     });
 }
+// SUBSTITUA A FUNÇÃO ANTIGA POR ESTA VERSÃO CORRIGIDA
 
+function popularTabelaCustos(custos) {
+    // Armazena os dados originais para a função de edição consultar
+    popularTabelaCustos.dados = custos;
+
+    const tbody = document.querySelector('#table-custos-mes tbody');
+    if (!tbody || !custos) return;
+
+    tbody.innerHTML = ''; // Limpa a tabela
+    custos.forEach(custo => {
+        const tr = document.createElement('tr');        
+        tr.dataset.mesRefOriginal = (typeof custo.MesRef === 'string') ? custo.MesRef.split('T')[0] : '';
+        
+        tr.innerHTML = `
+            <td>${custo.MesRef ? new Date(custo.MesRef).toLocaleDateString('pt-BR', {month: '2-digit', year: 'numeric', timeZone: 'UTC'}) : ''}</td>
+            <td>${formatNumber(custo.LiqMCPACL)}</td>
+            <td>${formatNumber(custo.LiqMCPAPE)}</td>
+            <td>${formatNumber(custo.LiqEnerReserva)}</td>
+            <td>${formatNumber(custo.LiqRCAP)}</td>
+            <td>${formatNumber(custo.SpreadVenda)}</td>
+            <td>${formatNumber(custo.ModelagemMes)}</td>
+            <td><button class="btn btn-edit btn-sm">Editar</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 function popularTabelaCurvaGeracao(dados) {
     const tbody = document.querySelector('#table-curva-geracao tbody');
     tbody.innerHTML = '';
-     if (!dados || dados.length === 0) {
+      if (!dados || dados.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5">Nenhum dado encontrado.</td></tr>';
         return;
     }
     dados.forEach(item => {
         const tr = document.createElement('tr');
+
+        // ---> ALTERAÇÃO AQUI: Adiciona o dataset com o IdMes original (ex: 202501)
+        tr.dataset.idmesOriginal = item.IdMes;
+
         const idMesFormatado = String(item.IdMes).replace(/(\d{4})(\d{2})/, '$1-$2');
         tr.innerHTML = `
             <td>${idMesFormatado}</td>
@@ -1449,26 +1499,7 @@ function popularTabelaPrecos(precos) {
     });
 }
 
-function popularTabelaCustos(custos) {
-    const tbody = document.querySelector('#table-custos-mes tbody');
-    if (!tbody || !custos) return;
 
-    tbody.innerHTML = ''; // Limpa a tabela
-    custos.forEach(custo => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${custo.MesRef ? new Date(custo.MesRef).toLocaleDateString('pt-BR', {month: '2-digit', year: 'numeric'}) : ''}</td>
-            <td>${formatNumber(custo.LiqMCPACL)}</td>
-            <td>${formatNumber(custo.LiqMCPAPE)}</td>
-            <td>${formatNumber(custo.LiqEnerReserva)}</td>
-            <td>${formatNumber(custo.LiqRCAP)}</td>
-            <td>${formatNumber(custo.SpreadVenda)}</td>
-            <td>${formatNumber(custo.ModelagemMes)}</td>
-            <td><button class="btn btn-edit btn-sm">Editar</button></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
 
     // --- VII. EVENT LISTENERS ---
     tabButtons.forEach(button => button.addEventListener('click', () => mudarAba(button.dataset.tab)));
@@ -1523,8 +1554,37 @@ function popularTabelaCustos(custos) {
         }
     });
 
-// SUBSTITUA O EVENT LISTENER DO BOTÃO POR ESTE
 
+    closePrecoMwhModalBtn.addEventListener('click', () => fecharModal(precoMwhModal));
+    cancelPrecoMwhBtn.addEventListener('click', () => fecharModal(precoMwhModal));
+
+    precoMwhForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const anoOriginal = document.getElementById('preco-mwh-ano-original').value;
+        const fonteOriginal = document.getElementById('preco-mwh-fonte-original').value;
+        
+        const formData = new FormData(precoMwhForm);
+        const data = Object.fromEntries(formData.entries());
+
+        const url = `${API_URL}/api/parametros/preco-mwh/${anoOriginal}/${encodeURIComponent(fonteOriginal)}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+            
+            alert(result.sucesso);
+            fecharModal(precoMwhModal);
+            await carregarParametros(); // Atualiza a tabela na interface
+        } catch (error) {
+            alert(`Erro ao salvar: ${error.message}`);
+        }
+    });
     manageHistoricoBtn.addEventListener('click', () => {
         const ucId = estadoAtual.unidade.id;
         // Pega o ano diretamente do campo de input no momento do clique
@@ -1541,6 +1601,126 @@ function popularTabelaCustos(custos) {
         historicoSubtitle.textContent = `Editando histórico para a UC ${ucId} do ano de ${ano}.`;
         popularFormularioHistoricoAnual(ucId, ano);
         switchScreen('historico', 'form');
+    });
+
+
+
+
+    // Botões Fechar e Cancelar sub abas
+    closeCustosMesModalBtn.addEventListener('click', () => fecharModal(custosMesModal));
+    cancelCustosMesBtn.addEventListener('click', () => fecharModal(custosMesModal));
+
+    custosMesForm.addEventListener('submit', async(event) => {
+        event.preventDefault();
+        const mesRefOriginal = document.getElementById('custos-mes-ref-original').value;
+        const formData = new FormData(custosMesForm);
+        const data = Object.fromEntries(formData.entries());
+
+        const url = `${API_URL}/api/parametros/custos-mes/${mesRefOriginal}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+
+            alert(result.sucesso);
+            fecharModal(custosMesModal);
+            await carregarParametros();
+        } catch (error) {
+            alert(`Erro ao salvar Custos Base: ${error.message}`);
+        }
+    });
+
+    closeAjusteTarifaModalBtn.addEventListener('click', () => fecharModal(ajusteTarifaModal));
+    cancelAjusteTarifaBtn.addEventListener('click', () => fecharModal(ajusteTarifaModal));
+
+    ajusteTarifaForm.addEventListener('submit',async (event) => {
+        event.preventDefault();
+        const cnpjOriginal = document.getElementById('ajuste-tarifa-cnpj-original').value;
+        const anoOriginal = document.getElementById('ajuste-tarifa-ano-original').value;
+        const formData = new formData(ajusteTarifaForm);
+        const data = Object.fromEntries(formData.entries());
+
+        const url = `${API_URL}/api/parametros/ajuste-tarifa/${encodeURIComponent(cnpjOriginal)}/${anoOriginal}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                header: { 'Content-Type': 'application/json '},
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+
+            alert(result.sucesso);
+            fecharModal(ajusteTarifaModal);
+            await carregarAjusteTarifa(cnpjOriginal);
+        } catch (error) {
+            alert(`Erro ao salvar Ajuste de Tarifa: ${error.message}`);
+        }
+    });
+
+    closeDadosGeracaoModalBtn.addEventListener('click', () => fecharModal(dadosGeracaoModal));
+    cancelDadosGeracaoBtn.addEventListener('click', () => fecharModal(dadosGeracaoModal));
+
+    dadosGeracaoForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const fonteOriginal = document.getElementById('dados-geracao-fonte-original').value;
+        const localOriginal = document.getElementById('dados-geracao-local-original').value;
+        const formData = new formData(dadosGeracaoForm);
+        const data = Object.fromEntries(formData.entries());
+
+        const url = `${API_URL}/api/parametros/dados-geracao/${encodeURIComponent(fonteOriginal)}/${encodeURIComponent(localOriginal)}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error (result.erro);
+
+            alert(result.sucesso);
+            fecharModal(dadosGeracaoModal);
+            await carregarDadosGeracao();
+        } catch (error) {
+            alert(`Erro ao salvar Dados de Geração: ${error.message}`);
+        }
+    });
+    
+    closeCurvaGeracaoModalBtn.addEventListener('click', () => fecharModal(curvaGeracaoModal));
+    cancelCurvaGeracaoBtn.addEventListener('click', () => fecharModal(curvaGeracaoModal));
+
+    curvaGeracaoForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const idmesOriginal = document.getElementById('curva-geracao-idmes-original').value;
+        const fonteOriginal = document.getElementById('curva-geracao-fonte-original').value;
+        const localOriginal = document.getElementById('curva-geracao-local-original').value;
+        const formData = new formatarData(curvaGeracaoForm);
+        const data = Object.fromEntries(formData.entries());
+
+        const url = `${API_URL}/api/parametros/curva-geracao/${idmesOriginal}/${encodeURIComponent(fonteOriginal)}/${encodeURIComponent(localOriginal)}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.erro);
+
+            alert(result.sucesso);
+            fecharModal(curvaGeracaoModal);
+            await carregarDadosGeracao();
+        } catch (error){
+            alert(`Erro ao salvar Curva de Geração: ${error.message}`);
+        }
     });
 
     addPropostaBtn.addEventListener('click', () => { propostaForm.reset(); propostaUnidadeSelector.innerHTML = '<option value="">Selecione um lead primeiro</option>'; propostaUnidadeSelector.disabled = true; switchScreen('proposta', 'form'); });
@@ -1619,18 +1799,52 @@ function popularTabelaCustos(custos) {
         }
     });
 
+
     document.getElementById('parametros').addEventListener('click', (event) => {
         const editButton = event.target.closest('.btn-edit');
-        if (!editButton) return; 
+        if (!editButton) return;
 
         const table = editButton.closest('table');
         if (!table) return;
 
         if (table.id === 'table-ajuste-ipca') {
             abrirModalEdicaoIPCA(editButton);
+        } 
+        else if (table.id === 'table-precos-ano') {
+            abrirModalEdicaoPrecoMwh(editButton);
+        }
+        else if (table.id === 'table-custos-mes'){
+            abrirModalEdicaoCustosMes(editButton);
+        }
+        else if (table.id === 'table-ajuste-tarifa'){
+            abrirModalEdicaoAjusteTarifa(editButton);
+        }
+        else if (table.id === 'table-dados-geracao'){
+            abrirModalEdicaoDadosGeracao(editButton);
+        }
+        else if (table.id === 'table-curva-geracao'){
+            abrirModalEdicaoCurvaGeracao(editButton);
         }
     });
+    function abrirModalEdicaoPrecoMwh(button) {
+        const row = button.closest('tr');
+        const ano = row.cells[0].textContent;
+        const fonte = row.cells[1].textContent;
+        const preco = row.cells[2].textContent;
+        const corrigir = row.cells[3].textContent;
 
+        // Preenche os inputs escondidos com as chaves originais
+        document.getElementById('preco-mwh-ano-original').value = ano;
+        document.getElementById('preco-mwh-fonte-original').value = fonte;
+
+        // Preenche o formulário
+        precoMwhForm.querySelector('#preco-mwh-ano').value = ano;
+        precoMwhForm.querySelector('#preco-mwh-fonte').value = fonte;
+        precoMwhForm.querySelector('#preco-mwh-preco').value = preco.replace(/\./g, '').replace(',', '.'); // Formata para o input
+        precoMwhForm.querySelector('#preco-mwh-corrigir').value = corrigir;
+
+        abrirModal(precoMwhModal);
+    }
     periodoRapidoBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const meses = parseInt(btn.dataset.meses, 10);
@@ -1642,6 +1856,75 @@ function popularTabelaCustos(custos) {
             simulacaoDataFimInput.value = fimCorrigido.toLocaleDateString('pt-BR');
         });
     });
+
+    function abrirModalEdicaoCustosMes(button) {
+        const row = button.closest('tr');
+        const mesRefOriginal = row.dataset.mesRefOriginal; // Pega a data original do atributo
+        
+        document.getElementById('custos-mes-ref-original').value = mesRefOriginal;
+        custosMesForm.querySelector('#custos-mes-ref').value = row.cells[0].textContent;
+        custosMesForm.querySelector('[name="LiqMCPACL"]').value = row.cells[1].textContent.replace(/\./g, '').replace(',', '.');
+        custosMesForm.querySelector('[name="LiqMCPAPE"]').value = row.cells[2].textContent.replace(/\./g, '').replace(',', '.');
+        custosMesForm.querySelector('[name="LiqEnerReserva"]').value = row.cells[3].textContent.replace(/\./g, '').replace(',', '.');
+        custosMesForm.querySelector('[name="LiqRCAP"]').value = row.cells[4].textContent.replace(/\./g, '').replace(',', '.');
+        custosMesForm.querySelector('[name="SpreadVenda"]').value = row.cells[5].textContent.replace(/\./g, '').replace(',', '.');
+        custosMesForm.querySelector('[name="ModelagemMes"]').value = row.cells[6].textContent.replace(/\./g, '').replace(',', '.');
+        abrirModal(custosMesModal);
+    }
+
+    function abrirModalEdicaoAjusteTarifa(button) {
+        const cnpj = document.getElementById('ajuste-tarifa-distribuidora-select').value;
+        const row = button.closest('tr');
+        const ano = row.cells[0].textContent;
+
+        document.getElementById('ajuste-tarifa-cnpj-original').value = cnpj;
+        document.getElementById('ajuste-tarifa-ano-original').value = ano;
+
+        ajusteTarifaForm.querySelector('[name="CnpjDistribuidora"]').value = cnpj;
+        ajusteTarifaForm.querySelector('[name="Ano"]').value = ano;
+        ajusteTarifaForm.querySelector('[name="PctTusdkWP"]').value = row.cells[1].textContent.replace(/\./g, '').replace(',', '.');
+        ajusteTarifaForm.querySelector('[name="PctTusdkWFP"]').value = row.cells[2].textContent.replace(/\./g, '').replace(',', '.');
+        ajusteTarifaForm.querySelector('[name="PctTusdMWhP"]').value = row.cells[3].textContent.replace(/\./g, '').replace(',', '.');
+        ajusteTarifaForm.querySelector('[name="PctTusdMWhFP"]').value = row.cells[4].textContent.replace(/\./g, '').replace(',', '.');
+        ajusteTarifaForm.querySelector('[name="PctTEMWhP"]').value = row.cells[5].textContent.replace(/\./g, '').replace(',', '.');
+        ajusteTarifaForm.querySelector('[name="PctTEMWhFP"]').value = row.cells[6].textContent.replace(/\./g, '').replace(',', '.');
+        
+        abrirModal(ajusteTarifaModal);
+    }
+
+    function abrirModalEdicaoDadosGeracao(button) {
+        const row = button.closest('tr');
+        const fonte = row.cells[0].textContent;
+        const local = row.cells[1].textContent;
+
+        document.getElementById('dados-geracao-fonte-original').value = fonte;
+        document.getElementById('dados-geracao-local-original').value = local;
+
+        dadosGeracaoForm.querySelector('[name="Fonte"]').value = fonte;
+        dadosGeracaoForm.querySelector('[name="Local"]').value = local;
+        dadosGeracaoForm.querySelector('[name="VolumeMWhAno"]').value = row.cells[2].textContent.replace(/\./g, '').replace(',', '.');
+        dadosGeracaoForm.querySelector('[name="PrecoRS_MWh"]').value = row.cells[3].textContent.replace(/\./g, '').replace(',', '.');
+
+        abrirModal(dadosGeracaoModal);
+    }
+
+    function abrirModalEdicaoCurvaGeracao(button) {
+        const row = button.closest('tr');
+        const idMesOriginal = row.dataset.idmesOriginal; // Pega o ID original (ex: 202501)
+        const fonte = row.cells[1].textContent;
+        const local = row.cells[2].textContent;
+
+        document.getElementById('curva-geracao-idmes-original').value = idMesOriginal;
+        document.getElementById('curva-geracao-fonte-original').value = fonte;
+        document.getElementById('curva-geracao-local-original').value = local;
+        
+        curvaGeracaoForm.querySelector('[name="IdMes"]').value = row.cells[0].textContent; // Mostra YYYY-MM
+        curvaGeracaoForm.querySelector('[name="Fonte"]').value = fonte;
+        curvaGeracaoForm.querySelector('[name="Local"]').value = local;
+        curvaGeracaoForm.querySelector('[name="PctSazonalizacaoMes"]').value = row.cells[3].textContent.replace(/\./g, '').replace(',', '.');
+
+        abrirModal(curvaGeracaoModal);
+    }
 
     simulacaoLeadSelector.addEventListener('change', async () => {
         const leadId = simulacaoLeadSelector.value;

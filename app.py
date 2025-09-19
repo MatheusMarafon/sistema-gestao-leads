@@ -1164,6 +1164,37 @@ def get_dados_geracao():
             conn.close()
 
 
+@app.route("/api/parametros/preco-mwh/<int:ano>/<string:fonte>", methods=["PUT"])
+def update_preco_mwh(ano, fonte):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+
+    try:
+        data = request.json
+        sql = f"""UPDATE [{NOME_TABELA_PARAM_PRECOS_ANO}] SET 
+                    PrecoRS_MWh = ?, 
+                    Corrigir = ?
+                WHERE Ano = ? AND Fonte = ?"""
+
+        params = (to_float(data.get("PrecoRS_MWh")), data.get("Corrigir"), ano, fonte)
+
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            return jsonify({"erro": "Nenhum registro encontrado para atualizar."}), 404
+
+        return jsonify({"sucesso": "Preço MWh atualizado com sucesso!"})
+
+    except pyodbc.Error as ex:
+        return jsonify({"erro": f"Erro na base de dados: {ex}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 @app.route("/api/parametros/ajuste-ipca/<int:ano>", methods=["PUT"])
 def update_ajuste_ipca(ano):
     conn = get_db_connection()
@@ -1259,6 +1290,156 @@ def save_parametros_simulacao():
         conn.rollback()
         print(f"[ERRO] Falha ao salvar parâmetros de simulação: {e}")
         return jsonify({"erro": f"Ocorreu um erro inesperado: {e}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+# ====================================================================
+# ADICIONE ESTE BLOCO INTEIRO DE CÓDIGO NO SEU app.py
+# (Contém as 4 rotas que faltam)
+# ====================================================================
+
+
+# ROTA PARA ATUALIZAR CUSTOS BASE (tbl_P_01_01_02_CustosBaseMes)
+@app.route("/api/parametros/custos-mes/<string:mes_ref>", methods=["PUT"])
+def update_custos_mes(mes_ref):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+
+    try:
+        data = request.json
+        # Converte a data string 'YYYY-MM-DD' de volta para um objeto datetime para o banco
+        mes_ref_obj = datetime.strptime(mes_ref, "%Y-%m-%d")
+
+        sql = f"""UPDATE [{NOME_TABELA_PARAM_CUSTOS_MES}] SET 
+                    LiqMCPACL = ?, LiqMCPAPE = ?, LiqEnerReserva = ?, LiqRCAP = ?, 
+                    SpreadVenda = ?, ModelagemMes = ?
+                WHERE MesRef = ?"""
+
+        params = (
+            to_float(data.get("LiqMCPACL")),
+            to_float(data.get("LiqMCPAPE")),
+            to_float(data.get("LiqEnerReserva")),
+            to_float(data.get("LiqRCAP")),
+            to_float(data.get("SpreadVenda")),
+            to_float(data.get("ModelagemMes")),
+            mes_ref_obj,
+        )
+
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            return jsonify({"erro": "Nenhum registro encontrado para atualizar."}), 404
+
+        return jsonify({"sucesso": "Custos do mês atualizados com sucesso!"})
+
+    except Exception as e:
+        return jsonify({"erro": f"Erro na base de dados: {str(e)}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+# ROTA PARA ATUALIZAR AJUSTE DE TARIFA (tbl_P_02_01_02_AjusteTarifa)
+@app.route("/api/parametros/ajuste-tarifa/<path:cnpj>/<int:ano>", methods=["PUT"])
+def update_ajuste_tarifa(cnpj, ano):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+
+    try:
+        data = request.json
+        sql = f"""UPDATE [{NOME_TABELA_AJUSTE_TARIFA}] SET 
+                    PctTusdkWP = ?, PctTusdkWFP = ?, PctTusdMWhP = ?, PctTusdMWhFP = ?, 
+                    PctTEMWhP = ?, PctTEMWhFP = ?
+                WHERE CnpjDistribuidora = ? AND Ano = ?"""
+
+        params = (
+            to_float(data.get("PctTusdkWP")),
+            to_float(data.get("PctTusdkWFP")),
+            to_float(data.get("PctTusdMWhP")),
+            to_float(data.get("PctTusdMWhFP")),
+            to_float(data.get("PctTEMWhP")),
+            to_float(data.get("PctTEMWhFP")),
+            cnpj,
+            ano,
+        )
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"erro": "Registro não encontrado."}), 404
+        return jsonify({"sucesso": "Ajuste de tarifa atualizado!"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+# ROTA PARA ATUALIZAR DADOS DE GERAÇÃO (tbl_P_03_01_01_DadosGeracao)
+@app.route(
+    "/api/parametros/dados-geracao/<string:fonte>/<string:local>", methods=["PUT"]
+)
+def update_dados_geracao(fonte, local):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+
+    try:
+        data = request.json
+        sql = f"""UPDATE [{NOME_TABELA_DADOS_GERACAO}] SET 
+                    VolumeMWhAno = ?, PrecoRS_MWh = ?
+                WHERE Fonte = ? AND Local = ?"""
+
+        params = (
+            to_float(data.get("VolumeMWhAno")),
+            to_float(data.get("PrecoRS_MWh")),
+            fonte,
+            local,
+        )
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"erro": "Registro não encontrado."}), 404
+        return jsonify({"sucesso": "Dados de geração atualizados!"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+# ROTA PARA ATUALIZAR CURVA DE GERAÇÃO (tbl_P_03_01_02_CurvaGeracao)
+@app.route(
+    "/api/parametros/curva-geracao/<int:id_mes>/<string:fonte>/<string:local>",
+    methods=["PUT"],
+)
+def update_curva_geracao(id_mes, fonte, local):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"erro": "Falha na conexão."}), 500
+
+    try:
+        data = request.json
+        sql = f"""UPDATE [{NOME_TABELA_CURVA_GERACAO}] SET 
+                    PctSazonalizacaoMes = ?
+                WHERE IdMes = ? AND Fonte = ? AND Local = ?"""
+
+        params = (to_float(data.get("PctSazonalizacaoMes")), id_mes, fonte, local)
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"erro": "Registro não encontrado."}), 404
+        return jsonify({"sucesso": "Curva de sazonalização atualizada!"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
     finally:
         if conn:
             conn.close()

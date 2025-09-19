@@ -150,10 +150,6 @@
                                     <input type="text" id="data_registro_lead" name="DataResgistroLead" class="datepicker-input" readonly placeholder="Clique para selecionar">
                                     <i class="fa-solid fa-calendar-days"></i>
                                 </div>
-                                <div class="input-group">
-                                    <label for="usuario">Usuário do Registo</label>
-                                    <input type="text" id="usuario" name="UsuriaEditorRegistro">
-                                </div>
                             </div>
 
                             <div class="form-actions">
@@ -1029,74 +1025,241 @@
         </main>
     </div>
 
-    <div id="vendedor-modal" class="modal-overlay hidden">
-          <div class="modal-content">
-              <div class="modal-header">
-                  <h2><i class="fas fa-user-tie"></i> Vendedor e Contato</h2>
-                  <button id="close-vendedor-modal" class="close-button">&times;</button>
-              </div>
-              <div class="modal-body">
-                  <form id="vendedor-contato-form">
-                      <fieldset>
-                          <legend>Vendedor Responsável</legend>
-                          <div class="form-grid">
-                              <div class="input-group"><label>Vendedor*</label><input type="text" name="Vendedor"></div>
-                              <div class="input-group with-icon"><label>Data de Envio*</label><input type="text" name="DataEnvio" class="datepicker-input" readonly placeholder="Clique para selecionar"><i class="fa-solid fa-calendar-days"></i></div>
-                              <div class="input-group with-icon"><label>Validade do Lead*</label><input type="text" name="DataValidade" class="datepicker-input" readonly placeholder="Clique para selecionar"><i class="fa-solid fa-calendar-days"></i></div>
-                          </div>
-                      </fieldset>
-                      <fieldset>
-                          <legend>Contato Principal</legend>
-                          <div class="form-grid">
-                              <div class="input-group"><label>Nome do Contato*</label><input type="text" name="NomeContato"></div>
-                              <div class="input-group"><label>E-mail</label><input type="email" name="Email"></div>
-                              <div class="input-group"><label>Telefone</label><input type="tel" name="Telefone"></div>
-                          </div>
-                      </fieldset>
-                  </form>
-              </div>
-              <div class="modal-footer">
-                  <button id="save-vendedor-contato" type="submit" form="vendedor-contato-form" class="btn btn-save">
-                      <i class="fas fa-save"></i> Salvar Informações
-                  </button>
-              </div>
-          </div>
-      </div>
+ <div id="vendedor-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-user-tie"></i> Vendedor e Contato</h2>
+                    <button id="close-vendedor-modal" class="close-button">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="vendedor-contato-form">
+                        <fieldset>
+                            <legend>Vendedor Responsável</legend>
+                            <div class="form-grid">
+                                <div class="input-group"><label>Vendedor*</label><input type="text" name="Vendedor"></div>
+                                <div class="input-group with-icon"><label>Data de Envio*</label><input type="text" name="DataEnvio" class="datepicker-input" readonly placeholder="Clique para selecionar"><i class="fa-solid fa-calendar-days"></i></div>
+                                <div class="input-group with-icon"><label>Validade do Lead*</label><input type="text" name="DataValidade" class="datepicker-input" readonly placeholder="Clique para selecionar"><i class="fa-solid fa-calendar-days"></i></div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Contato Principal</legend>
+                            <div class="form-grid">
+                                <div class="input-group"><label>Nome do Contato*</label><input type="text" name="NomeContato"></div>
+                                <div class="input-group"><label>E-mail</label><input type="email" name="Email"></div>
+                                <div class="input-group"><label>Telefone</label><input type="tel" name="Telefone"></div>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-vendedor-contato" type="submit" form="vendedor-contato-form" class="btn btn-save">
+                        <i class="fas fa-save"></i> Salvar Informações
+                    </button>
+                </div>
+            </div>
+        </div>
 
-      <div id="calendar-modal" class="modal-overlay hidden">
-          <div class="modal-content" id="calendar-container">
-              <div id="calendar-wrapper"></div>
-          </div>
-      </div>
+        <div id="calendar-modal" class="modal-overlay hidden">
+            <div class="modal-content" id="calendar-container">
+                <div id="calendar-wrapper"></div>
+            </div>
+        </div>
 
-      <div id="ipca-modal" class="modal-overlay hidden">
-          <div class="modal-content" style="max-width: 500px;">
-              <div class="modal-header">
-                  <h2 id="ipca-modal-title"><i class="fas fa-plus"></i> Adicionar Ajuste IPCA</h2>
-                  <button id="close-ipca-modal" class="close-button">&times;</button>
-              </div>
-              <div class="modal-body">
-                  <form id="ipca-form" autocomplete="off">
-                      <input type="hidden" id="ipca-ano-original" name="AnoOriginal">
-                      <div class="input-group">
-                          <label for="ipca-ano">Ano*</label>
-                          <input type="number" id="ipca-ano" name="Ano" placeholder="Ex: 2025" required>
-                      </div>
-                      <div class="input-group" style="margin-top: 15px;">
-                          <label for="ipca-percentual">Percentual IPCA (%)*</label>
-                          <input type="number" id="ipca-percentual" name="PctIPCA" step="0.01" placeholder="Ex: 5.75" required>
-                      </div>
-                  </form>
-              </div>
-              <div class="modal-footer">
-                  <button id="cancel-ipca-button" type="button" class="btn btn-secondary">Cancelar</button>
-                  <button id="save-ipca-button" type="submit" form="ipca-form" class="btn btn-save">
-                      <i class="fas fa-save"></i> Salvar
-                  </button>
-              </div>
-          </div>
-      </div>
-      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-      <script src="script.js"></script>
-  </body>
-  </html>
+        <div id="ipca-modal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2 id="ipca-modal-title"><i class="fas fa-plus"></i> Adicionar Ajuste IPCA</h2>
+                    <button id="close-ipca-modal" class="close-button">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="ipca-form" autocomplete="off">
+                        <input type="hidden" id="ipca-ano-original" name="AnoOriginal">
+                        <div class="input-group">
+                            <label for="ipca-ano">Ano*</label>
+                            <input type="number" id="ipca-ano" name="Ano" placeholder="Ex: 2025" required>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ipca-percentual">Percentual IPCA (%)*</label>
+                            <input type="number" id="ipca-percentual" name="PctIPCA" step="0.01" placeholder="Ex: 5.75" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancel-ipca-button" type="button" class="btn btn-secondary">Cancelar</button>
+                    <button id="save-ipca-button" type="submit" form="ipca-form" class="btn btn-save">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="preco-mwh-modal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2 id="preco-mwh-modal-title"><i class="fas fa-edit"></i> Editar Preço por MWh</h2>
+                    <button id="close-preco-mwh-modal" class="close-button">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="preco-mwh-form" autocomplete="off">
+                        <input type="hidden" id="preco-mwh-ano-original">
+                        <input type="hidden" id="preco-mwh-fonte-original">
+                        
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label for="preco-mwh-ano">Ano*</label>
+                                <input type="number" id="preco-mwh-ano" name="Ano" required readonly>
+                            </div>
+                            <div class="input-group">
+                                <label for="preco-mwh-fonte">Fonte*</label>
+                                <input type="text" id="preco-mwh-fonte" name="Fonte" required readonly>
+                            </div>
+                            <div class="input-group">
+                                <label for="preco-mwh-preco">Preço (R$/MWh)*</label>
+                                <input type="text" id="preco-mwh-preco" name="PrecoRS_MWh" placeholder="Ex: 250,50" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="preco-mwh-corrigir">Corrigir por</label>
+                                <select id="preco-mwh-corrigir" name="Corrigir">
+                                    <option value="">Nenhum</option>
+                                    <option value="IPCA">IPCA</option>
+                                    <option value="IGPM">IGPM</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancel-preco-mwh-button" type="button" class="btn btn-secondary">Cancelar</button>
+                    <button id="save-preco-mwh-button" type="submit" form="preco-mwh-form" class="btn btn-save">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    <div id="custos-mes-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Custos Base do Mês</h2>
+                <button id="close-custos-mes-modal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="custos-mes-form" autocomplete="off">
+                    <input type="hidden" id="custos-mes-ref-original">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="input-group">
+                            <label>Mês de Referência</label>
+                            <input type="text" id="custos-mes-ref" name="MesRef" readonly>
+                        </div>
+                    </div>
+                    <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="input-group"><label>Liq. MCPA-CL</label><input type="text" name="LiqMCPACL"></div>
+                        <div class="input-group"><label>Liq. MCPA-PE</label><input type="text" name="LiqMCPAPE"></div>
+                        <div class="input-group"><label>Liq. Ener. Reserva</label><input type="text" name="LiqEnerReserva"></div>
+                        <div class="input-group"><label>Liq. RCAP</label><input type="text" name="LiqRCAP"></div>
+                        <div class="input-group"><label>Spread Venda</label><input type="text" name="SpreadVenda"></div>
+                        <div class="input-group"><label>Modelagem</label><input type="text" name="ModelagemMes"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-custos-mes-button" type="button" class="btn btn-secondary">Cancelar</button>
+                <button id="save-custos-mes-button" type="submit" form="custos-mes-form" class="btn btn-save">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ajuste-tarifa-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Ajuste de Tarifa</h2>
+                <button id="close-ajuste-tarifa-modal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="ajuste-tarifa-form" autocomplete="off">
+                    <input type="hidden" id="ajuste-tarifa-cnpj-original">
+                    <input type="hidden" id="ajuste-tarifa-ano-original">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                         <div class="input-group"><label>Distribuidora (CNPJ)</label><input type="text" name="CnpjDistribuidora" readonly></div>
+                         <div class="input-group"><label>Ano</label><input type="number" name="Ano" readonly></div>
+                    </div>
+                     <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="input-group"><label>% TUSD kW P</label><input type="text" name="PctTusdkWP"></div>
+                        <div class="input-group"><label>% TUSD kW FP</label><input type="text" name="PctTusdkWFP"></div>
+                        <div class="input-group"><label>% TUSD MWh P</label><input type="text" name="PctTusdMWhP"></div>
+                        <div class="input-group"><label>% TUSD MWh FP</label><input type="text" name="PctTusdMWhFP"></div>
+                        <div class="input-group"><label>% TE MWh P</label><input type="text" name="PctTEMWhP"></div>
+                        <div class="input-group"><label>% TE MWh FP</label><input type="text" name="PctTEMWhFP"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-ajuste-tarifa-button" type="button" class="btn btn-secondary">Cancelar</button>
+                <button id="save-ajuste-tarifa-button" type="submit" form="ajuste-tarifa-form" class="btn btn-save">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dados-geracao-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Dados de Geração</h2>
+                <button id="close-dados-geracao-modal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="dados-geracao-form" autocomplete="off">
+                    <input type="hidden" id="dados-geracao-fonte-original">
+                    <input type="hidden" id="dados-geracao-local-original">
+                    <div class="form-grid">
+                        <div class="input-group"><label>Fonte</label><input type="text" name="Fonte" readonly></div>
+                        <div class="input-group"><label>Local</label><input type="text" name="Local" readonly></div>
+                        <div class="input-group"><label>Volume (MWh/Ano)</label><input type="text" name="VolumeMWhAno"></div>
+                        <div class="input-group"><label>Preço (R$/MWh)</label><input type="text" name="PrecoRS_MWh"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-dados-geracao-button" type="button" class="btn btn-secondary">Cancelar</button>
+                <button id="save-dados-geracao-button" type="submit" form="dados-geracao-form" class="btn btn-save">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="curva-geracao-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Curva de Sazonalização</h2>
+                <button id="close-curva-geracao-modal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="curva-geracao-form" autocomplete="off">
+                    <input type="hidden" id="curva-geracao-idmes-original">
+                    <input type="hidden" id="curva-geracao-fonte-original">
+                    <input type="hidden" id="curva-geracao-local-original">
+                    <div class="form-grid">
+                        <div class="input-group"><label>Mês/Ano (ID)</label><input type="text" name="IdMes" readonly></div>
+                        <div class="input-group"><label>Fonte</label><input type="text" name="Fonte" readonly></div>
+                        <div class="input-group"><label>Local</label><input type="text" name="Local" readonly></div>
+                        <div class="input-group"><label>% Sazonalização</label><input type="text" name="PctSazonalizacaoMes"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-curva-geracao-button" type="button" class="btn btn-secondary">Cancelar</button>
+                <button id="save-curva-geracao-button" type="submit" form="curva-geracao-form" class="btn btn-save">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+        <script src="script.js"></script>
+    </body>
+    </html>
